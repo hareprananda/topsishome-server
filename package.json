@@ -1,0 +1,23 @@
+{
+  "name": "topsishome-server",
+  "version": "1.0.0",
+  "main": "server.ts",
+  "license": "MIT",
+  "scripts": {
+    "dev": "nodemon -r tsconfig-paths/register src/server.ts server.ts"
+  },
+  "dependencies": {
+    "@types/cors": "^2.8.12",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.0",
+    "express": "^4.17.3"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.13",
+    "@types/node": "^17.0.21",
+    "nodemon": "^2.0.15",
+    "ts-node": "^10.5.0",
+    "tsconfig-paths": "^3.12.0",
+    "typescript": "^4.6.2"
+  }
+}
