@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import Cors from "./Cors";
 import Routing from "./Routing";
 import Middleware from "./Middleware";
+import Database from "./Database";
 
 dotenv.config();
 export default (app: express.Application) => {
@@ -17,4 +18,7 @@ export default (app: express.Application) => {
 
   //routing
   Routing(app);
+
+  //database
+  Database();
 };
