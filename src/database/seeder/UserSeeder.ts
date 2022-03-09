@@ -4,7 +4,7 @@ const UserSeeder = async () => {
   await UserModel.create({
     level: "admin",
     name: "Wayan kaleran",
-    nik: "919191919191",
+    _id: "919191919191",
     password: "this is password",
   });
 };

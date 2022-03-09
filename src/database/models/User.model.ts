@@ -1,18 +1,18 @@
 import mongoose from "mongoose";
 
 export type TUser = {
+  _id: string;
   name: string;
-  nik: string;
   password: string;
   level: "admin" | "user";
 };
 
 const schema = new mongoose.Schema<TUser>(
   {
-    name: String,
-    nik: String,
-    password: String,
-    level: String,
+    _id: { type: String },
+    name: { type: String, required: true },
+    password: { type: String, required: true },
+    level: { type: String, required: true },
   },
   {
     timestamps: true,
