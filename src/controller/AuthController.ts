@@ -1,6 +1,6 @@
 import UserModel, { TUser } from "src/database/models/User.model";
 import bcrypt from "bcrypt";
-import { TCBRoute } from "src/types/Global";
+import { AuthTCBRoute, TCBRoute } from "src/types/Global";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { response } from "express";
@@ -39,7 +39,7 @@ class AuthController {
         userObject,
         process.env.TOKEN_SECRET as string,
         {
-          expiresIn: 60 * 60, //1 hour
+          expiresIn: 60 * 60 * 24 * 30, //30 days
         }
       );
       const refreshToken = jwt.sign(
@@ -81,6 +81,10 @@ class AuthController {
       .catch((err) => {
         res.json({ data: err.message.slice(7).replace(/:.*/, "") });
       });
+  };
+
+  me: AuthTCBRoute = (req, res) => {
+    return res.json(req.body.auth);
   };
 }
 

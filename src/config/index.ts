@@ -2,8 +2,8 @@ import express from "express";
 import dotenv from "dotenv";
 import Cors from "./Cors";
 import Routing from "./Routing";
-import Middleware from "./Middleware";
 import Database from "./Database";
+import RegisterMiddleware from "src/middleware/RegisterMiddleware";
 
 dotenv.config();
 export default (app: express.Application) => {
@@ -14,7 +14,7 @@ export default (app: express.Application) => {
   Cors(app);
 
   //middleware
-  Middleware(app);
+  RegisterMiddleware(app);
 
   //routing
   Routing(app);
