@@ -24,8 +24,10 @@ class CriteriaController {
     try {
       if (!Object.values(newData).every((value) => !!value))
         throw { message: "Missing properties" };
-      const storedData = await CriteriaModel.create(newData);
-      return res.json({ data: newData });
+      const { _id, bobot, keterangan, name } = await CriteriaModel.create(
+        newData
+      );
+      return res.json({ data: { _id, bobot, keterangan, name } });
     } catch (err: any) {
       return res.status(400).json({ data: err.message });
     }
