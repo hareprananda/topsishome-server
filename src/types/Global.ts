@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from "express";
-import { Query } from "express-serve-static-core";
 
 type AuthenticatedPayload = {
   auth: {
@@ -9,18 +8,24 @@ type AuthenticatedPayload = {
   };
 };
 
-interface TRequest<B, Q extends Query> extends Request {
+interface TRequest<B, Q extends Request["query"], P extends Request["params"]>
+  extends Request {
   body: B;
   query: Q;
+  params: P;
 }
-export type TCBRoute<B = any, Q extends Query = {}> = (
-  req: TRequest<B, Q>,
-  res: Response,
-  next?: NextFunction
-) => void;
+export type TCBRoute<
+  B = any,
+  Q extends Request["query"] = {},
+  P extends Request["params"] = {}
+> = (req: TRequest<B, Q, P>, res: Response, next?: NextFunction) => void;
 
-export type AuthTCBRoute<B = {}, Q extends Query = {}> = (
-  req: TRequest<B & AuthenticatedPayload, Q>,
+export type AuthTCBRoute<
+  B = {},
+  Q extends Request["query"] = {},
+  P extends Request["params"] = {}
+> = (
+  req: TRequest<B & AuthenticatedPayload, Q, P>,
   res: Response,
   next?: NextFunction
 ) => void;

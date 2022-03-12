@@ -1,8 +1,8 @@
 import Database from "src/config/Database";
-import UserSeeder from "./UserSeeder";
+import CriteriaSeeder from "./CriteriaSeeder";
 
 const RegisterSeeder = {
-  UserSeeder,
+  CriteriaSeeder,
 };
 
 Database(RegisterSeeder);

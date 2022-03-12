@@ -79,7 +79,7 @@ class AuthController {
     })
       .then(() => res.json({ data: "Register Success" }))
       .catch((err) => {
-        res.json({ data: err.message.slice(7).replace(/:.*/, "") });
+        res.status(400).json({ data: err.message.slice(7).replace(/:.*/, "") });
       });
   };
 
