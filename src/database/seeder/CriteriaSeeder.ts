@@ -3,22 +3,22 @@ import CriteriaModel from "../models/Criteria.model";
 const CriteriaSeeder = async () => {
   const defaultCriteria = [
     {
-      name: "Luas Tanah",
+      name: "luasTanah",
       bobot: 4,
       keterangan: "cost",
     },
     {
-      name: "Kondisi Rumah",
+      name: "kondisiRumah",
       bobot: 4,
       keterangan: "cost",
     },
     {
-      name: "Belum Pernah menerima bantuan",
+      name: "menerimaBantuan",
       bobot: 3,
       keterangan: "cost",
     },
     {
-      name: "Penghasilan",
+      name: "penghasilan",
       bobot: 5,
       keterangan: "benefit",
     },

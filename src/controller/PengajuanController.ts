@@ -8,7 +8,6 @@ class PengajuanController {
   get: AuthTCBRoute<{}, { page: string }> = async (req, res) => {
     const page = parseInt(req.query.page || "1");
     const dataLength = await PengajuanModel.count();
-    Math.round;
     const numberOfPage = Math.ceil(dataLength / this.paginationLength);
     const data = await PengajuanModel.aggregate([
       {
@@ -58,6 +57,7 @@ class PengajuanController {
       penghasilan,
       status,
       umur,
+      menerimaBantuan,
     } = req.body;
     const newData: TPengajuan = {
       alamat,
@@ -69,6 +69,7 @@ class PengajuanController {
       penghasilan,
       status,
       umur,
+      menerimaBantuan,
     };
     try {
       if (!Object.values(newData).every((val) => !!val))
@@ -97,6 +98,7 @@ class PengajuanController {
       penghasilan,
       status,
       umur,
+      menerimaBantuan,
     } = req.body;
     const newData: TPengajuan = {
       alamat,
@@ -108,6 +110,7 @@ class PengajuanController {
       penghasilan,
       status,
       umur,
+      menerimaBantuan,
     };
     try {
       if (!Object.values(newData).every((val) => !!val))

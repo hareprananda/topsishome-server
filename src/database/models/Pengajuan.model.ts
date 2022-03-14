@@ -7,6 +7,7 @@ export interface TPengajuan {
   jenisKelamin: "laki" | "perempuan";
   umur: number;
   kondisiRumah: number;
+  menerimaBantuan: number;
   luasTanah: number; //dalam are,
   penghasilan: number; //perbulan
   pekerjaan: string;
@@ -23,6 +24,7 @@ const schema = new mongoose.Schema<TPengajuan>(
     penghasilan: { type: Number, required: true },
     pekerjaan: { type: String, required: true },
     nama: { type: String, required: true },
+    menerimaBantuan: { type: Number, required: true },
   },
   {
     timestamps: true,

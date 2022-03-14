@@ -5,7 +5,6 @@ import CriteriaController from "src/controller/CriteriaController";
 import PengajuanController from "src/controller/PengajuanController";
 const router = express.Router();
 
-router.get("/", CountController.testController);
 router.post("/auth/login", AuthController.login);
 router.post("/auth/register", AuthController.register);
 router.get("/me", AuthController.me);
@@ -20,5 +19,7 @@ router.get("/pengajuan/:id", PengajuanController.find);
 router.post("/pengajuan", PengajuanController.store);
 router.delete("/pengajuan/:id", PengajuanController.delete);
 router.put("/pengajuan/:id", PengajuanController.update);
+
+router.get("/result", CountController.result);
 
 export default router;
