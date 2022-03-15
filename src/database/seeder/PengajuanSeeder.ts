@@ -5,20 +5,16 @@ const PengajuanSeeder = async () => {
   const pengajuanData: TPengajuan[] = [];
   const statusArray = ["single", "married"];
   const gender = ["laki", "perempuan"] as const;
-  const kondisiRumah = [1, 2, 3, 4, 5];
+  const ageRange = [20, 21, 22, 23, 24, 25, 26, 27, 28];
   for (let i = 0; i < 30; i++) {
     pengajuanData.push({
+      _id: i + 1,
       alamat: faker.address.city(),
       jenisKelamin: gender[Math.floor(Math.random() * gender.length)],
-      kondisiRumah:
-        kondisiRumah[Math.floor(Math.random() * kondisiRumah.length)],
-      luasTanah: Math.floor(Math.random() * Math.pow(10, 5)),
       nama: faker.name.findName(),
       pekerjaan: faker.name.jobTitle(),
-      penghasilan: Math.floor(Math.random() * Math.pow(10, 2)) * 100000,
       status: statusArray[Math.floor(Math.random() * statusArray.length)],
-      umur: 21,
-      menerimaBantuan: Math.floor(Math.random() * 10),
+      umur: ageRange[Math.floor(Math.random() * ageRange.length)],
     });
   }
   await PengajuanModel.insertMany(pengajuanData);

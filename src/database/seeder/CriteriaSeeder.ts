@@ -1,24 +1,28 @@
-import CriteriaModel from "../models/Criteria.model";
+import CriteriaModel, { TCriteria } from "../models/Criteria.model";
 
 const CriteriaSeeder = async () => {
-  const defaultCriteria = [
+  const defaultCriteria: TCriteria[] = [
     {
-      name: "luasTanah",
+      _id: 1,
+      name: "Luas Tanah",
       bobot: 4,
       keterangan: "cost",
     },
     {
-      name: "kondisiRumah",
+      _id: 2,
+      name: "Kondisi Rumah",
       bobot: 4,
       keterangan: "cost",
     },
     {
-      name: "menerimaBantuan",
+      _id: 3,
+      name: "Menerima Bantuan",
       bobot: 3,
       keterangan: "cost",
     },
     {
-      name: "penghasilan",
+      _id: 4,
+      name: "Penghasilan",
       bobot: 5,
       keterangan: "benefit",
     },
