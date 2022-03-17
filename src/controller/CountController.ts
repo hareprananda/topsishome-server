@@ -1,5 +1,6 @@
 import CriteriaModel from "src/database/models/Criteria.model";
 import PengajuanModel from "src/database/models/Pengajuan.model";
+import PengajuanCriteriaModel from "src/database/models/PengajuanCriteria.model";
 import { AuthTCBRoute, TCBRoute } from "src/types/Global";
 // luastanah, kondisiRumah, penerima bantuan, penghasilan dibawah umk
 
@@ -10,6 +11,18 @@ interface TResult {
   kondisiRumah: number;
   menerimaBantuan: number;
   penghasilan: number;
+}
+
+interface RawData {
+  _id: number;
+  nama: string;
+  criteria: {
+    _id: number;
+    name: string;
+    keterangan: "cost" | "benefit";
+    bobot: number;
+    value: number;
+  }[];
 }
 
 type PromiseReturnType<T> = T extends () => Promise<infer U> ? U : T;
@@ -192,32 +205,77 @@ class CountController {
   };
 
   result: AuthTCBRoute = async (req, res) => {
-    const rawData: TResult[] = await PengajuanModel.aggregate([
+    const rawData: RawData[] = await PengajuanCriteriaModel.aggregate([
       {
-        $project: {
-          nama: "$$ROOT.nama",
-          luasTanah: "$$ROOT.luasTanah",
-          kondisiRumah: "$$ROOT.kondisiRumah",
-          menerimaBantuan: "$$ROOT.menerimaBantuan",
-          penghasilan: "$$ROOT.penghasilan",
+        $lookup: {
+          from: "pengajuans",
+          as: "pengajuan",
+          foreignField: "_id",
+          localField: "pengajuanId",
         },
       },
+      {
+        $lookup: {
+          from: "criterias",
+          as: "criteria",
+          foreignField: "_id",
+          localField: "criteriaId",
+        },
+      },
+      {
+        $unwind: "$pengajuan",
+      },
+      {
+        $unwind: "$criteria",
+      },
+      {
+        $project: {
+          _id: "$pengajuan._id",
+          nama: "$pengajuan.nama",
+          criteria: {
+            _id: "$criteria._id",
+            name: "$criteria.name",
+            keterangan: "$criteria.keterangan",
+            bobot: "$criteria.bobot",
+            value: "$value",
+          },
+        },
+      },
+      {
+        $group: {
+          _id: "$_id",
+          nama: { $first: "$nama" },
+          criteria: { $push: "$criteria" },
+        },
+      },
+      // {
+      //   $unwind: "$pengajuan",
+      // },
+      // {
+      //   $project: {
+      //     nama: "$$ROOT.nama",
+      //     luasTanah: "$$ROOT.luasTanah",
+      //     kondisiRumah: "$$ROOT.kondisiRumah",
+      //     menerimaBantuan: "$$ROOT.menerimaBantuan",
+      //     penghasilan: "$$ROOT.penghasilan",
+      //   },
+      // },
     ]);
 
-    const normalisasi = this.normalisasi(rawData);
-    const objectKriteria = await this.getCriteriaObject();
-    const normalisasiTerbobot = this.normalisasiTerbobot(
-      normalisasi,
-      objectKriteria
-    );
-    const solusiIdeal = this.idealSolution(normalisasiTerbobot, objectKriteria);
-    const jarakSolusiIdeal = this.idealSolutionDistance(
-      normalisasiTerbobot,
-      solusiIdeal
-    );
-    const finalRanking = this.finalRankingList(jarakSolusiIdeal);
+    // const normalisasi = this.normalisasi(rawData);
+    // const objectKriteria = await this.getCriteriaObject();
+    // const normalisasiTerbobot = this.normalisasiTerbobot(
+    //   normalisasi,
+    //   objectKriteria
+    // );
+    // const solusiIdeal = this.idealSolution(normalisasiTerbobot, objectKriteria);
+    // const jarakSolusiIdeal = this.idealSolutionDistance(
+    //   normalisasiTerbobot,
+    //   solusiIdeal
+    // );
+    // const finalRanking = this.finalRankingList(jarakSolusiIdeal);
 
-    return res.json({ finalRanking });
+    return res.json({ rawData });
   };
 }
 
