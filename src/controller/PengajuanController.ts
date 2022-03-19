@@ -1,7 +1,23 @@
+import CriteriaModel from "src/database/models/Criteria.model";
 import PengajuanModel, {
   TPengajuan,
 } from "src/database/models/Pengajuan.model";
 import { AuthTCBRoute } from "src/types/Global";
+
+interface SingleData {
+  _id: number;
+  alamat: string;
+  status: string;
+  jenisKelamin: string;
+  umur: number;
+  pekerjaan: string;
+  nama: string;
+  criteria: {
+    id: number;
+    name: string;
+    value: number;
+  }[];
+}
 
 class PengajuanController {
   private paginationLength = 20;
@@ -37,12 +53,83 @@ class PengajuanController {
   find: AuthTCBRoute<{}, {}, { id: string }> = async (req, res) => {
     const { id } = req.params;
     try {
-      const pengajuan = await PengajuanModel.findOne(
-        { _id: id },
-        { createdAt: 0, updatedAt: 0, __v: 0 }
-      );
+      const allCriteria = await CriteriaModel.find({});
+      const pengajuan: SingleData = (
+        await PengajuanModel.aggregate([
+          {
+            $match: {
+              _id: parseInt(id),
+            },
+          },
+          {
+            $lookup: {
+              from: "pengajuancriterias",
+              as: "pengajuancriteria",
+              foreignField: "pengajuanId",
+              localField: "_id",
+            },
+          },
+          {
+            $unwind: "$pengajuancriteria",
+          },
+          {
+            $lookup: {
+              from: "criterias",
+              as: "criteria",
+              foreignField: "_id",
+              localField: "pengajuancriteria.criteriaId",
+            },
+          },
+          {
+            $unwind: "$criteria",
+          },
+          {
+            $group: {
+              _id: "$_id",
+              alamat: { $first: "$alamat" },
+              status: { $first: "$status" },
+              jenisKelamin: { $first: "$jenisKelamin" },
+              umur: { $first: "$umur" },
+              pekerjaan: { $first: "$pekerjaan" },
+              nama: { $first: "$nama" },
+              criteria: {
+                $push: { $mergeObjects: ["$criteria", "$pengajuancriteria"] },
+              },
+            },
+          },
+          {
+            $project: {
+              _id: "$_id",
+              alamat: "$alamat",
+              status: "$status",
+              jenisKelamin: "$jenisKelamin",
+              umur: "$umur",
+              pekerjaan: "$pekerjaan",
+              nama: "$nama",
+              criteria: {
+                $map: {
+                  input: "$criteria",
+                  as: "criteriaVal",
+                  in: {
+                    id: "$$criteriaVal.criteriaId",
+                    name: "$$criteriaVal.name",
+                    value: "$$criteriaVal.value",
+                  },
+                },
+              },
+            },
+          },
+        ])
+      )[0];
+      pengajuan.criteria = allCriteria.map((criteria) => ({
+        id: criteria._id,
+        name: criteria.name,
+        value:
+          pengajuan.criteria.find((cr) => cr.id === criteria._id)?.value || 0,
+      }));
       return res.json({ data: pengajuan });
-    } catch {
+    } catch (err) {
+      console.log(err);
       return res.status(404).json({ data: "Data not found" });
     }
   };
