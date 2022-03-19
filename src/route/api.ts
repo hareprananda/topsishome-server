@@ -16,9 +16,9 @@ router.post("/criteria", CriteriaController.store);
 
 router.get("/pengajuan", PengajuanController.get);
 router.get("/pengajuan/:id", PengajuanController.find);
-router.post("/pengajuan", PengajuanController.store);
+// router.post("/pengajuan", PengajuanController.store);
 router.delete("/pengajuan/:id", PengajuanController.delete);
-router.put("/pengajuan/:id", PengajuanController.update);
+// router.put("/pengajuan/:id", PengajuanController.update);
 
 router.get("/result", CountController.result);
 

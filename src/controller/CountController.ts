@@ -1,4 +1,4 @@
-import CriteriaModel from "src/database/models/Criteria.model";
+import CriteriaModel, { TCriteria } from "src/database/models/Criteria.model";
 import PengajuanModel from "src/database/models/Pengajuan.model";
 import PengajuanCriteriaModel from "src/database/models/PengajuanCriteria.model";
 import { AuthTCBRoute, TCBRoute } from "src/types/Global";
@@ -28,11 +28,14 @@ interface RawData {
 type PromiseReturnType<T> = T extends () => Promise<infer U> ? U : T;
 
 class CountController {
-  private pembagi: Omit<TResult, "_id" | "nama"> = {
-    kondisiRumah: 0,
-    luasTanah: 0,
-    menerimaBantuan: 0,
-    penghasilan: 0,
+  private pembagi: Record<string, number> = {};
+  private allCriteria: TCriteria[] = [];
+  private solusiIdeal: {
+    positif: Record<string, number>;
+    negatif: Record<string, number>;
+  } = {
+    positif: {},
+    negatif: {},
   };
   getCriteriaObject = async () => {
     const allKriteria = await CriteriaModel.find({}, { _id: 0, __v: 0 });
@@ -48,49 +51,61 @@ class CountController {
   };
 
   //1 matriks keputusan ternormalisasi
-  normalisasi = (rawData: TResult[]) => {
+  normalisasi = (rawData: RawData[]) => {
+    for (const tickerData of rawData) {
+      for (const criteria of this.allCriteria) {
+        const value =
+          tickerData.criteria.find((val) => val._id === criteria._id)?.value ||
+          0;
+        if (this.pembagi[criteria.name] === undefined)
+          this.pembagi[criteria.name] = 0;
+        this.pembagi[criteria.name] += Math.pow(value, 2);
+      }
+    }
     const pembagiKeys = Object.keys(
       this.pembagi
     ) as (keyof typeof this.pembagi)[];
-    for (const tickerData of rawData) {
-      for (const key of pembagiKeys) {
-        this.pembagi[key] += Math.pow(tickerData[key] as number, 2);
-      }
-    }
-
     for (const key of pembagiKeys) {
       this.pembagi[key] = Math.sqrt(this.pembagi[key]);
     }
-
-    const normalisasi: TResult[] = rawData.map((tickerData) => {
-      let temp = {} as TResult;
-      for (const key of pembagiKeys) {
-        temp[key] = tickerData[key] / this.pembagi[key];
+    const normalisasi = rawData.map((tickerData) => {
+      const temp = [] as RawData["criteria"];
+      for (const criteria of this.allCriteria) {
+        const criteriaIndex = tickerData.criteria.findIndex(
+          (val) => val._id == criteria._id
+        ) as number;
+        temp.push({
+          ...tickerData.criteria[criteriaIndex],
+          value:
+            tickerData.criteria[criteriaIndex].value /
+            this.pembagi[criteria.name],
+        });
       }
-      return { ...temp, _id: tickerData._id, nama: tickerData.nama };
+      return { ...tickerData, criteria: temp };
     });
 
     return normalisasi;
   };
 
   //2 matriks keputusan ternormalisasi dan terbobot
-  normalisasiTerbobot = (
-    normalisasi: TResult[],
-    objectKriteria: PromiseReturnType<typeof this.getCriteriaObject>
-  ) => {
-    const keysWithNumberVal = Object.keys(
-      this.pembagi
-    ) as (keyof typeof this.pembagi)[];
-    const normalisasiTerbobot: TResult[] = normalisasi.map(
+  normalisasiTerbobot = (normalisasi: RawData[]) => {
+    const normalisasiTerbobot: RawData[] = normalisasi.map(
       (tickerNormalisasi) => {
-        let temp = {} as TResult;
-        for (const key of keysWithNumberVal) {
-          temp[key] = tickerNormalisasi[key] * objectKriteria[key].bobot;
+        const temp = [] as RawData["criteria"];
+        for (const criteria of this.allCriteria) {
+          const criteriaOnTickerIndex = tickerNormalisasi.criteria.findIndex(
+            (val) => val._id == criteria._id
+          ) as number;
+          temp.push({
+            ...tickerNormalisasi.criteria[criteriaOnTickerIndex],
+            value:
+              tickerNormalisasi.criteria[criteriaOnTickerIndex].value *
+              criteria.bobot,
+          });
         }
         return {
-          ...temp,
-          _id: tickerNormalisasi._id,
-          nama: tickerNormalisasi.nama,
+          ...tickerNormalisasi,
+          criteria: temp,
         };
       }
     );
@@ -98,110 +113,88 @@ class CountController {
   };
 
   //3 Mendapatkan solusi ideal positif dan negatif
-  idealSolution = (
-    normalisasiTerbobot: TResult[],
-    objectKriteria: Record<
-      string,
-      { bobot: number; keterangan: "cost" | "benefit" }
-    >
-  ) => {
+  idealSolution = (normalisasiTerbobot: RawData[]) => {
     const keysWithNumberVal = Object.keys(
       this.pembagi
     ) as (keyof typeof this.pembagi)[];
-    const solusiIdeal = {
-      positif: {},
-      negatif: {},
-    } as {
-      positif: Omit<TResult, "_id" | "nama">;
-      negatif: Omit<TResult, "_id" | "nama">;
-    };
 
     for (const tickerNormalisasi of normalisasiTerbobot) {
       for (const key of keysWithNumberVal) {
-        const solusiPositif = solusiIdeal.positif[key];
-        const solusiNegatif = solusiIdeal.negatif[key];
-        const keterangan = objectKriteria[key].keterangan;
-        const currentSolution = tickerNormalisasi[key];
+        const solusiPositif = this.solusiIdeal.positif[key];
+        const solusiNegatif = this.solusiIdeal.negatif[key];
+        const currentCriteria = tickerNormalisasi.criteria.find(
+          (val) => val.name === key
+        ) as RawData["criteria"][number];
+        const keterangan = currentCriteria.keterangan;
+        const currentSolution = currentCriteria.value;
 
         if (solusiPositif === undefined) {
-          solusiIdeal.positif[key] = currentSolution;
-          solusiIdeal.negatif[key] = currentSolution;
+          this.solusiIdeal.positif[key] = currentSolution;
+          this.solusiIdeal.negatif[key] = currentSolution;
         } else {
           if (keterangan === "benefit") {
-            solusiIdeal.positif[key] =
+            this.solusiIdeal.positif[key] =
               solusiPositif > currentSolution ? solusiPositif : currentSolution;
-            solusiIdeal.negatif[key] =
+            this.solusiIdeal.negatif[key] =
               solusiNegatif < currentSolution ? solusiNegatif : currentSolution;
           } else if (keterangan === "cost") {
-            solusiIdeal.positif[key] =
+            this.solusiIdeal.positif[key] =
               solusiPositif < currentSolution ? solusiPositif : currentSolution;
-            solusiIdeal.negatif[key] =
+            this.solusiIdeal.negatif[key] =
               solusiNegatif > currentSolution ? solusiNegatif : currentSolution;
           }
         }
       }
     }
-    return solusiIdeal;
   };
 
   //4 Jarak solusi ideal positif dan negatif
-  idealSolutionDistance = (
-    normalisasiTerbobot: TResult[],
-    solusiIdeal: {
-      positif: Omit<TResult, "_id" | "nama">;
-      negatif: Omit<TResult, "_id" | "nama">;
-    }
-  ) => {
-    const jarakSolusiIdeal: Record<
-      string,
-      { dMin: number; dPlus: number; nama: string }
-    > = {};
+  idealSolutionDistance = (normalisasiTerbobot: RawData[]) => {
+    const jarakSolusiIdeal: {
+      dMin: number;
+      dPlus: number;
+      nama: string;
+      id: RawData["_id"];
+    }[] = [];
 
     for (const dataSingleNormalisasi of normalisasiTerbobot) {
       let tempDPlus: number = 0;
       let tempDMin: number = 0;
-      const { _id, nama, ...numberData } = dataSingleNormalisasi;
-      for (let keyOfNumberData of Object.keys(numberData)) {
-        const kriteriaKey = keyOfNumberData as keyof typeof numberData;
+      for (const singleCriteria of dataSingleNormalisasi.criteria) {
         tempDPlus += Math.pow(
-          solusiIdeal.positif[kriteriaKey] - dataSingleNormalisasi[kriteriaKey],
+          this.solusiIdeal.positif[singleCriteria.name] - singleCriteria.value,
           2
         );
         tempDMin += Math.pow(
-          dataSingleNormalisasi[kriteriaKey] - solusiIdeal.negatif[kriteriaKey],
+          singleCriteria.value - this.solusiIdeal.negatif[singleCriteria.name],
           2
         );
       }
-      jarakSolusiIdeal[_id] = {
+      jarakSolusiIdeal.push({
         dPlus: Math.sqrt(tempDPlus),
         dMin: Math.sqrt(tempDMin),
         nama: dataSingleNormalisasi.nama,
-      };
+        id: dataSingleNormalisasi._id,
+      });
     }
     return jarakSolusiIdeal;
   };
 
   //5 get final ranking
   finalRankingList = (
-    jarakSolusiIdeal: Record<
-      string,
-      { dMin: number; dPlus: number; nama: string }
-    >
+    jarakSolusiIdeal: ReturnType<typeof this.idealSolutionDistance>
   ) => {
-    const finalRanking: { ticker: string; nilai: number; nama: string }[] = [];
-    for (const ticker of Object.keys(jarakSolusiIdeal)) {
-      const { dPlus, dMin } = jarakSolusiIdeal[ticker];
-      const temp = {
-        ticker,
-        nilai: dMin / (dMin + dPlus),
-        nama: jarakSolusiIdeal[ticker].nama,
-      };
-      finalRanking.push(temp);
-    }
-
-    finalRanking.sort((a, b) => b.nilai - a.nilai);
-
-    return finalRanking;
+    // const finalRanking: { ticker: string; nilai: number; nama: string }[] = [];
+    return jarakSolusiIdeal
+      .map((jarak) => {
+        const { dMin, dPlus, id, nama } = jarak;
+        return {
+          id,
+          nama,
+          value: dMin / (dMin + dPlus),
+        };
+      })
+      .sort((a, b) => b.value - a.value);
   };
 
   result: AuthTCBRoute = async (req, res) => {
@@ -248,34 +241,25 @@ class CountController {
           criteria: { $push: "$criteria" },
         },
       },
-      // {
-      //   $unwind: "$pengajuan",
-      // },
-      // {
-      //   $project: {
-      //     nama: "$$ROOT.nama",
-      //     luasTanah: "$$ROOT.luasTanah",
-      //     kondisiRumah: "$$ROOT.kondisiRumah",
-      //     menerimaBantuan: "$$ROOT.menerimaBantuan",
-      //     penghasilan: "$$ROOT.penghasilan",
-      //   },
-      // },
+      {
+        $sort: {
+          nama: 1,
+        },
+      },
     ]);
-
-    // const normalisasi = this.normalisasi(rawData);
+    const allCriteria = await CriteriaModel.find(
+      {},
+      { __v: 0, createdAt: 0, updatedAt: 0 }
+    );
+    this.allCriteria = allCriteria;
+    const normalisasi = this.normalisasi(rawData);
     // const objectKriteria = await this.getCriteriaObject();
-    // const normalisasiTerbobot = this.normalisasiTerbobot(
-    //   normalisasi,
-    //   objectKriteria
-    // );
-    // const solusiIdeal = this.idealSolution(normalisasiTerbobot, objectKriteria);
-    // const jarakSolusiIdeal = this.idealSolutionDistance(
-    //   normalisasiTerbobot,
-    //   solusiIdeal
-    // );
-    // const finalRanking = this.finalRankingList(jarakSolusiIdeal);
+    const normalisasiTerbobot = this.normalisasiTerbobot(normalisasi);
+    this.idealSolution(normalisasiTerbobot);
+    const jarakSolusiIdeal = this.idealSolutionDistance(normalisasiTerbobot);
+    const finalRanking = this.finalRankingList(jarakSolusiIdeal);
 
-    return res.json({ rawData });
+    return res.json({ finalRanking });
   };
 }
 

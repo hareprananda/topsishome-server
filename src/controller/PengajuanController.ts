@@ -46,89 +46,89 @@ class PengajuanController {
       return res.status(404).json({ data: "Data not found" });
     }
   };
-  store: AuthTCBRoute<TPengajuan> = async (req, res) => {
-    const {
-      alamat,
-      jenisKelamin,
-      kondisiRumah,
-      luasTanah,
-      nama,
-      pekerjaan,
-      penghasilan,
-      status,
-      umur,
-      menerimaBantuan,
-    } = req.body;
-    const newData: TPengajuan = {
-      alamat,
-      jenisKelamin,
-      kondisiRumah,
-      luasTanah,
-      nama,
-      pekerjaan,
-      penghasilan,
-      status,
-      umur,
-      menerimaBantuan,
-    };
-    try {
-      if (!Object.values(newData).every((val) => !!val))
-        throw { message: "Some key properties missing" };
-      const newStoredData = await PengajuanModel.create(newData);
+  // store: AuthTCBRoute<TPengajuan> = async (req, res) => {
+  //   const {
+  //     alamat,
+  //     jenisKelamin,
+  //     kondisiRumah,
+  //     luasTanah,
+  //     nama,
+  //     pekerjaan,
+  //     penghasilan,
+  //     status,
+  //     umur,
+  //     menerimaBantuan,
+  //   } = req.body;
+  //   const newData: TPengajuan = {
+  //     alamat,
+  //     jenisKelamin,
+  //     kondisiRumah,
+  //     luasTanah,
+  //     nama,
+  //     pekerjaan,
+  //     penghasilan,
+  //     status,
+  //     umur,
+  //     menerimaBantuan,
+  //   };
+  //   try {
+  //     if (!Object.values(newData).every((val) => !!val))
+  //       throw { message: "Some key properties missing" };
+  //     const newStoredData = await PengajuanModel.create(newData);
 
-      return res.json({ data: newStoredData });
-    } catch (err: any) {
-      return res.status(400).json({ data: err.message });
-    }
-  };
+  //     return res.json({ data: newStoredData });
+  //   } catch (err: any) {
+  //     return res.status(400).json({ data: err.message });
+  //   }
+  // };
   delete: AuthTCBRoute<{}, {}, { id: string }> = async (req, res) => {
     const { id } = req.params;
     await PengajuanModel.deleteOne({ _id: id });
     return res.json({ data: "Success" });
   };
-  update: AuthTCBRoute<TPengajuan, {}, { id: string }> = async (req, res) => {
-    const { id } = req.params;
-    const {
-      alamat,
-      jenisKelamin,
-      kondisiRumah,
-      luasTanah,
-      nama,
-      pekerjaan,
-      penghasilan,
-      status,
-      umur,
-      menerimaBantuan,
-    } = req.body;
-    const newData: TPengajuan = {
-      alamat,
-      jenisKelamin,
-      kondisiRumah,
-      luasTanah,
-      nama,
-      pekerjaan,
-      penghasilan,
-      status,
-      umur,
-      menerimaBantuan,
-    };
-    try {
-      if (!Object.values(newData).every((val) => !!val))
-        throw { message: "Some key properties missing" };
-      const newUpdatedData = await PengajuanModel.findOneAndUpdate(
-        { _id: id },
-        newData,
-        {
-          new: true,
-          fields: { createdAt: 0, updatedAt: 0, __v: 0 },
-        }
-      );
+  // update: AuthTCBRoute<TPengajuan, {}, { id: string }> = async (req, res) => {
+  //   const { id } = req.params;
+  //   const {
+  //     alamat,
+  //     jenisKelamin,
+  //     kondisiRumah,
+  //     luasTanah,
+  //     nama,
+  //     pekerjaan,
+  //     penghasilan,
+  //     status,
+  //     umur,
+  //     menerimaBantuan,
+  //   } = req.body;
+  //   const newData: TPengajuan = {
+  //     alamat,
+  //     jenisKelamin,
+  //     kondisiRumah,
+  //     luasTanah,
+  //     nama,
+  //     pekerjaan,
+  //     penghasilan,
+  //     status,
+  //     umur,
+  //     menerimaBantuan,
+  //   };
+  //   try {
+  //     if (!Object.values(newData).every((val) => !!val))
+  //       throw { message: "Some key properties missing" };
+  //     const newUpdatedData = await PengajuanModel.findOneAndUpdate(
+  //       { _id: id },
+  //       newData,
+  //       {
+  //         new: true,
+  //         fields: { createdAt: 0, updatedAt: 0, __v: 0 },
+  //       }
+  //     );
 
-      return res.json({ data: newUpdatedData });
-    } catch (err: any) {
-      return res.status(400).json({ data: err.message });
-    }
-  };
+  //     return res.json({ data: newUpdatedData });
+  //   } catch (err: any) {
+  //     return res.status(400).json({ data: err.message });
+  //   }
+  // };
 }
 
 export default new PengajuanController();

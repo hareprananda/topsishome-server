@@ -11,8 +11,8 @@ export interface TPengajuanCriteria {
 
 const schema = new Schema({
   _id: { type: Number },
-  pengajuanId: { type: Number, required: true },
-  criteriaId: { type: Number, required: true },
+  pengajuanId: { type: Number, required: true, ref: "pengajuans" },
+  criteriaId: { type: Number, required: true, ref: "criterias" },
   value: { type: Number, required: true },
 });
 
