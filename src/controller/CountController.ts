@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import CriteriaCache from "src/database/cache/CriteriaCache";
 import CriteriaModel, { TCriteria } from "src/database/models/Criteria.model";
 import PengajuanCriteriaModel from "src/database/models/PengajuanCriteria.model";
 import { AuthTCBRoute, TCBRoute } from "src/types/Global";
@@ -93,7 +94,7 @@ class CountController {
         const temp = [] as RawData["criteria"];
         for (const criteria of this.allCriteria) {
           const criteriaOnTickerIndex = tickerNormalisasi.criteria.findIndex(
-            (val) => val._id == criteria._id
+            (val) => val._id.toString() == criteria._id.toString()
           ) as number;
           temp.push({
             ...tickerNormalisasi.criteria[criteriaOnTickerIndex],
@@ -196,7 +197,7 @@ class CountController {
       .sort((a, b) => b.value - a.value);
   };
 
-  result: AuthTCBRoute = async (req, res) => {
+  getRawData = async () => {
     const rawData: RawData[] = await PengajuanCriteriaModel.aggregate([
       {
         $lookup: {
@@ -246,19 +247,47 @@ class CountController {
         },
       },
     ]);
-    const allCriteria = await CriteriaModel.find(
-      {},
-      { __v: 0, createdAt: 0, updatedAt: 0 }
-    );
-    this.allCriteria = allCriteria;
+    this.allCriteria = CriteriaCache.get();
+    return rawData;
+  };
+
+  result: AuthTCBRoute = async (req, res) => {
+    const rawData = await this.getRawData();
     const normalisasi = this.normalisasi(rawData);
-    // const objectKriteria = await this.getCriteriaObject();
     const normalisasiTerbobot = this.normalisasiTerbobot(normalisasi);
     this.idealSolution(normalisasiTerbobot);
     const jarakSolusiIdeal = this.idealSolutionDistance(normalisasiTerbobot);
     const finalRanking = this.finalRankingList(jarakSolusiIdeal);
 
-    return res.json({ finalRanking });
+    return res.json({ data: finalRanking });
+  };
+
+  resultDetail: AuthTCBRoute = async (req, res) => {
+    const rawData = await this.getRawData();
+    const normalisasi = this.normalisasi(rawData);
+    const normalisasiTerbobot = this.normalisasiTerbobot(normalisasi);
+    this.idealSolution(normalisasiTerbobot);
+    const jarakSolusiIdeal = this.idealSolutionDistance(normalisasiTerbobot);
+    const finalRanking = this.finalRankingList(jarakSolusiIdeal).slice(0, 10);
+
+    const topPengajuanID = finalRanking.map((rank) => rank.id);
+
+    return res.json({
+      data: {
+        rawData: rawData.filter((raw) => topPengajuanID.includes(raw._id)),
+        normalisasi: normalisasi.filter((normalisasi) =>
+          topPengajuanID.includes(normalisasi._id)
+        ),
+        normalisasiTerbobot: normalisasiTerbobot.filter((normalisasi) =>
+          topPengajuanID.includes(normalisasi._id)
+        ),
+        idealSolution: this.solusiIdeal,
+        idealSolutionDistance: jarakSolusiIdeal.filter((distance) =>
+          topPengajuanID.includes(distance.id)
+        ),
+        finalRanking,
+      },
+    });
   };
 }
 

@@ -21,5 +21,6 @@ router.delete("/pengajuan/:id", PengajuanController.delete);
 router.put("/pengajuan/:id", PengajuanController.update);
 
 router.get("/result", CountController.result);
+router.get("/result-detail", CountController.resultDetail);
 
 export default router;
