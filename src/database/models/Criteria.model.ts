@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 export type TCriteria = {
-  _id: string;
+  _id: mongoose.Types.ObjectId;
   name: string;
   keterangan: string;
   bobot: number;

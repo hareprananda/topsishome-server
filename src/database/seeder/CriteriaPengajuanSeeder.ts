@@ -3,6 +3,7 @@ import PengajuanModel, { TPengajuan } from "../models/Pengajuan.model";
 import PengajuanCriteriaModel, {
   TPengajuanCriteria,
 } from "../models/PengajuanCriteria.model";
+import { Types } from "mongoose";
 
 const CriteriaPengajuanSeeder = async () => {
   const allCriteria: TCriteria[] = await CriteriaModel.find({});
@@ -27,8 +28,8 @@ const CriteriaPengajuanSeeder = async () => {
         value = Math.floor(Math.random() * 10);
       else value = Math.floor(Math.random() * Math.pow(10, 2)) * 100000;
       newData.push({
-        criteriaId: criteria._id,
-        pengajuanId: pengajuan._id,
+        criteriaId: criteria._id as any,
+        pengajuanId: pengajuan._id as any,
         value,
       });
     }

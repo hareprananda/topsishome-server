@@ -1,5 +1,5 @@
+import mongoose from "mongoose";
 import CriteriaModel, { TCriteria } from "src/database/models/Criteria.model";
-import PengajuanModel from "src/database/models/Pengajuan.model";
 import PengajuanCriteriaModel from "src/database/models/PengajuanCriteria.model";
 import { AuthTCBRoute, TCBRoute } from "src/types/Global";
 // luastanah, kondisiRumah, penerima bantuan, penghasilan dibawah umk
@@ -14,18 +14,16 @@ interface TResult {
 }
 
 interface RawData {
-  _id: number;
+  _id: mongoose.Types.ObjectId;
   nama: string;
   criteria: {
-    _id: number;
+    _id: mongoose.Types.ObjectId;
     name: string;
     keterangan: "cost" | "benefit";
     bobot: number;
     value: number;
   }[];
 }
-
-type PromiseReturnType<T> = T extends () => Promise<infer U> ? U : T;
 
 class CountController {
   private pembagi: Record<string, number> = {};
@@ -55,8 +53,9 @@ class CountController {
     for (const tickerData of rawData) {
       for (const criteria of this.allCriteria) {
         const value =
-          tickerData.criteria.find((val) => val._id === criteria._id)?.value ||
-          0;
+          tickerData.criteria.find(
+            (val) => val._id.toString() === criteria._id.toString()
+          )?.value || 0;
         if (this.pembagi[criteria.name] === undefined)
           this.pembagi[criteria.name] = 0;
         this.pembagi[criteria.name] += Math.pow(value, 2);
@@ -72,7 +71,7 @@ class CountController {
       const temp = [] as RawData["criteria"];
       for (const criteria of this.allCriteria) {
         const criteriaIndex = tickerData.criteria.findIndex(
-          (val) => val._id == criteria._id
+          (val) => val._id.toString() == criteria._id.toString()
         ) as number;
         temp.push({
           ...tickerData.criteria[criteriaIndex],

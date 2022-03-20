@@ -1,5 +1,6 @@
 import CriteriaModel, { TCriteria } from "src/database/models/Criteria.model";
 import { AuthTCBRoute } from "src/types/Global";
+import { Types } from "mongoose";
 
 class CriteriaController {
   get: AuthTCBRoute = async (req, res) => {
@@ -35,7 +36,7 @@ class CriteriaController {
 
   delete: AuthTCBRoute<{}, {}, { id: string }> = async (req, res) => {
     const { id } = req.params;
-    await CriteriaModel.deleteOne({ _id: id });
+    await CriteriaModel.deleteOne({ _id: new Types.ObjectId(id) });
     return res.json({ data: "Success" });
   };
 
@@ -54,7 +55,7 @@ class CriteriaController {
       if (!Object.values(updatedCriteria).every((value) => !!value))
         throw { message: "Updated value aren't complete" };
       const newData = await CriteriaModel.findOneAndUpdate(
-        { _id: id },
+        { _id: new Types.ObjectId(id) },
         updatedCriteria,
         { new: true, fields: { createdAt: 0, updatedAt: 0, __v: 0 } }
       );
