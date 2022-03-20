@@ -6,7 +6,10 @@ const CriteriaCache = () => {
   const get = () => Cache;
 
   const refresh = async () => {
-    const allCriteria = await CriteriaModel.find({});
+    const allCriteria = await CriteriaModel.find(
+      {},
+      { createdAt: 0, updatedAt: 0, __v: 0 }
+    );
     Cache = allCriteria;
   };
 

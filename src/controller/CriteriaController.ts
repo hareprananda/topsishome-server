@@ -1,18 +1,13 @@
 import CriteriaModel, { TCriteria } from "src/database/models/Criteria.model";
 import { AuthTCBRoute } from "src/types/Global";
 import { Types } from "mongoose";
+import CriteriaCache from "database/cache/CriteriaCache";
 
 class CriteriaController {
   get: AuthTCBRoute = async (req, res) => {
-    try {
-      const allCriteria = await CriteriaModel.find(
-        {},
-        { createdAt: 0, updatedAt: 0, __v: 0 }
-      );
-      return res.json({ data: allCriteria });
-    } catch (_) {
-      return res.status(500).send({ data: "Oops something gone wrong" });
-    }
+    return res.json({
+      data: CriteriaCache.get(),
+    });
   };
 
   store: AuthTCBRoute<Partial<TCriteria>> = async (req, res) => {
@@ -28,6 +23,7 @@ class CriteriaController {
       const { _id, bobot, keterangan, name } = await CriteriaModel.create(
         newData
       );
+      await CriteriaCache.refresh();
       return res.json({ data: { _id, bobot, keterangan, name } });
     } catch (err: any) {
       return res.status(400).json({ data: err.message });
@@ -37,6 +33,7 @@ class CriteriaController {
   delete: AuthTCBRoute<{}, {}, { id: string }> = async (req, res) => {
     const { id } = req.params;
     await CriteriaModel.deleteOne({ _id: new Types.ObjectId(id) });
+    await CriteriaCache.refresh();
     return res.json({ data: "Success" });
   };
 
@@ -59,6 +56,7 @@ class CriteriaController {
         updatedCriteria,
         { new: true, fields: { createdAt: 0, updatedAt: 0, __v: 0 } }
       );
+      await CriteriaCache.refresh();
       res.json({ status: "Success", data: newData });
     } catch (err: any) {
       res.status(400).json({ data: err.message });
