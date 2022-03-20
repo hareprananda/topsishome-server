@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 export interface TPengajuan {
-  _id: number;
+  _id: string;
   nama: string;
   alamat: string;
   status: string;
@@ -12,7 +12,6 @@ export interface TPengajuan {
 
 const schema = new mongoose.Schema<TPengajuan>(
   {
-    _id: { type: Number },
     alamat: { type: String, required: true },
     status: { type: String, required: true },
     jenisKelamin: { type: String, required: true },

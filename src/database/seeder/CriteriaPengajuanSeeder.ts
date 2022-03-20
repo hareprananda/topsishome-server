@@ -15,7 +15,6 @@ const CriteriaPengajuanSeeder = async () => {
   Math.floor(Math.random() * 10);
   //luas tanah
 
-  let index = 0;
   for (let pengajuan of allPengajuan) {
     const newData: TPengajuanCriteria[] = [];
     for (let criteria of allCriteria) {
@@ -28,7 +27,6 @@ const CriteriaPengajuanSeeder = async () => {
         value = Math.floor(Math.random() * 10);
       else value = Math.floor(Math.random() * Math.pow(10, 2)) * 100000;
       newData.push({
-        _id: ++index,
         criteriaId: criteria._id,
         pengajuanId: pengajuan._id,
         value,

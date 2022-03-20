@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 export type TCriteria = {
-  _id: number;
+  _id: string;
   name: string;
   keterangan: string;
   bobot: number;
@@ -9,7 +9,6 @@ export type TCriteria = {
 
 const schema = new mongoose.Schema<TCriteria>(
   {
-    _id: Number,
     name: String,
     keterangan: String,
     bobot: Number,
