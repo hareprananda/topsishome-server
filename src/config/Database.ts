@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import Cache from "src/database/cache";
 
 dotenv.config();
 
@@ -17,6 +18,8 @@ export default (seederList?: Record<string, () => Promise<void>>) => {
         }
         console.log("=====Seeding Success=====");
         process.exit();
+      } else {
+        Cache();
       }
       console.log("Database connection established");
     })
