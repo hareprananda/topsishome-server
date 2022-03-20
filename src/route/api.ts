@@ -3,6 +3,8 @@ import CountController from "controller/CountController";
 import AuthController from "src/controller/AuthController";
 import CriteriaController from "src/controller/CriteriaController";
 import PengajuanController from "src/controller/PengajuanController";
+import UserController from "src/controller/UserController";
+import AdminMiddleware from "src/middleware/routemiddleware/AdminMiddleware";
 const router = express.Router();
 
 router.post("/auth/login", AuthController.login);
@@ -22,5 +24,8 @@ router.put("/pengajuan/:id", PengajuanController.update);
 
 router.get("/result", CountController.result);
 router.get("/result-detail", CountController.resultDetail);
+
+router.get("/users", AdminMiddleware(UserController.get));
+router.put("/user/:id", AdminMiddleware(UserController.update));
 
 export default router;

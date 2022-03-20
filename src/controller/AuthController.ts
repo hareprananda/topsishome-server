@@ -34,6 +34,12 @@ class AuthController {
       const user = await UserModel.findOne({ _id: id });
       if (!user || !bcrypt.compareSync(password, user.password)) throw "err";
       const userObject = user.toObject() as Partial<TUser>;
+      if (userObject.level === "guest")
+        throw {
+          message:
+            "Anda belum memiliki akses ke sistem ini, silahkan hubungi admin untuk memberi anda akses",
+          status: 401,
+        };
       delete userObject.password;
       const accessToken = jwt.sign(
         userObject,
@@ -52,8 +58,10 @@ class AuthController {
           refresh_token: refreshToken,
         },
       });
-    } catch (err) {
-      return res.status(400).json({ data: "id or password does not match" });
+    } catch (err: any) {
+      return res
+        .status(err.status || 400)
+        .json({ data: err.message || "id or password does not match" });
     }
   };
 
@@ -74,7 +82,7 @@ class AuthController {
     await UserModel.create({
       _id: id,
       name,
-      level: "user",
+      level: "guest",
       password: await bcrypt.hash(password, this.bcryptSaltRound),
     })
       .then(() => res.json({ data: "Register Success" }))

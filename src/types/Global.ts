@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from "express";
+import { TUser } from "src/database/models/User.model";
 
 type AuthenticatedPayload = {
   auth: {
     _id: string;
     name: string;
-    level: string;
+    level: TUser["level"];
   };
 };
 

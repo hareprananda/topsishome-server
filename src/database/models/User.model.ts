@@ -4,7 +4,7 @@ export type TUser = {
   _id: string;
   name: string;
   password: string;
-  level: "admin" | "user";
+  level: "administrator" | "user" | "guest";
 };
 
 const schema = new mongoose.Schema<TUser>(
