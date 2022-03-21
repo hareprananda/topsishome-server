@@ -1,0 +1,1 @@
+web: cross-env NODE_ENV=production node -r ./path-config dist/server.js
