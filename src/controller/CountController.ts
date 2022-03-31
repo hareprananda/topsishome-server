@@ -78,7 +78,7 @@ class CountController {
           ...tickerData.criteria[criteriaIndex],
           value:
             tickerData.criteria[criteriaIndex].value /
-            this.pembagi[criteria.name],
+              this.pembagi[criteria.name] || 0,
         });
       }
       return { ...tickerData, criteria: temp };
@@ -248,7 +248,23 @@ class CountController {
       },
     ]);
     this.allCriteria = CriteriaCache.get();
-    return rawData;
+    return rawData.map((data) => {
+      return {
+        ...data,
+        criteria: this.allCriteria.map((criteria) => {
+          //@ts-ignore
+          criteria = criteria.toObject();
+          const value =
+            data.criteria.find(
+              (val) => val._id.toString() === criteria._id.toString()
+            )?.value || 0;
+          return {
+            ...criteria,
+            value,
+          };
+        }) as RawData["criteria"],
+      };
+    });
   };
 
   result: AuthTCBRoute = async (req, res) => {
