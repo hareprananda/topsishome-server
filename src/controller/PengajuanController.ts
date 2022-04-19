@@ -251,6 +251,19 @@ class PengajuanController {
       return res.status(400).json({ data: err.message });
     }
   };
+
+  pengajuanChart: AuthTCBRoute = async (req, res) => {
+    const [chartData] = await PengajuanModel.aggregate([
+      {
+        $facet: {
+          gender: [{ $sortByCount: "$jenisKelamin" }],
+          umur: [{ $sortByCount: "$umur" }],
+          status: [{ $sortByCount: "$status" }],
+        },
+      },
+    ]);
+    return res.json({ data: chartData });
+  };
 }
 
 export default new PengajuanController();

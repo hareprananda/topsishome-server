@@ -23,6 +23,7 @@ router.delete("/pengajuan/:id", PengajuanController.delete);
 router.put("/pengajuan/:id", PengajuanController.update);
 
 router.get("/result", CountController.result);
+router.get("/result-profile-chart", PengajuanController.pengajuanChart);
 router.get("/result-detail", CountController.resultDetail);
 
 router.get("/users", AdminMiddleware(UserController.get));

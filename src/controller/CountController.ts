@@ -17,6 +17,7 @@ interface TResult {
 interface RawData {
   _id: mongoose.Types.ObjectId;
   nama: string;
+  alamat: string;
   criteria: {
     _id: mongoose.Types.ObjectId;
     name: string;
@@ -154,6 +155,7 @@ class CountController {
       dMin: number;
       dPlus: number;
       nama: string;
+      alamat: string;
       id: RawData["_id"];
     }[] = [];
 
@@ -174,6 +176,7 @@ class CountController {
         dPlus: Math.sqrt(tempDPlus),
         dMin: Math.sqrt(tempDMin),
         nama: dataSingleNormalisasi.nama,
+        alamat: dataSingleNormalisasi.alamat,
         id: dataSingleNormalisasi._id,
       });
     }
@@ -187,9 +190,10 @@ class CountController {
     // const finalRanking: { ticker: string; nilai: number; nama: string }[] = [];
     return jarakSolusiIdeal
       .map((jarak) => {
-        const { dMin, dPlus, id, nama } = jarak;
+        const { dMin, dPlus, id, nama, alamat } = jarak;
         return {
           id,
+          alamat,
           nama,
           value: dMin / (dMin + dPlus),
         };
@@ -225,6 +229,7 @@ class CountController {
         $project: {
           _id: "$pengajuan._id",
           nama: "$pengajuan.nama",
+          alamat: "$pengajuan.alamat",
           criteria: {
             _id: "$criteria._id",
             name: "$criteria.name",
@@ -238,6 +243,7 @@ class CountController {
         $group: {
           _id: "$_id",
           nama: { $first: "$nama" },
+          alamat: { $first: "$alamat" },
           criteria: { $push: "$criteria" },
         },
       },
