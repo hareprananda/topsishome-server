@@ -28,13 +28,18 @@ interface SingleData {
 
 class PengajuanController {
   private paginationLength = 20;
-  get: AuthTCBRoute<{}, { page: string }> = async (req, res) => {
+  get: AuthTCBRoute<{}, { page: string; name: string }> = async (req, res) => {
     const page = parseInt(req.query.page || "1");
-    const dataLength = await PengajuanModel.count();
+    const name = req.query.name || "";
+    const nameRegex = new RegExp(name, "gi");
+    const dataLength = await PengajuanModel.find({ nama: nameRegex }).count();
     const numberOfPage = Math.ceil(dataLength / this.paginationLength);
     const data = await PengajuanModel.aggregate([
       {
         $sort: { nama: 1 },
+      },
+      {
+        $match: { nama: nameRegex },
       },
       {
         $skip: (page - 1) * this.paginationLength,
