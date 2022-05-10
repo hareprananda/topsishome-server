@@ -1,5 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
+import FileUpload from "express-fileupload";
 import Cors from "./Cors";
 import Routing from "./Routing";
 import Database from "./Database";
@@ -9,6 +10,13 @@ dotenv.config();
 export default (app: express.Application) => {
   app.use(express.json());
   app.use(express.urlencoded({ extended: false }));
+
+  // enable files upload
+  app.use(
+    FileUpload({
+      createParentPath: true,
+    })
+  );
 
   //cors
   Cors(app);

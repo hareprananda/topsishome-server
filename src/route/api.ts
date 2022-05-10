@@ -21,6 +21,7 @@ router.get("/pengajuan/:id", PengajuanController.find);
 router.post("/pengajuan", PengajuanController.store);
 router.delete("/pengajuan/:id", PengajuanController.delete);
 router.put("/pengajuan/:id", PengajuanController.update);
+router.post("/upload/users", PengajuanController.uploadFile);
 
 router.get("/result", CountController.result);
 router.get("/result-profile-chart", PengajuanController.pengajuanChart);

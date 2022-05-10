@@ -1,11 +1,15 @@
 import CriteriaCache from "src/database/cache/CriteriaCache";
-import CriteriaModel from "src/database/models/Criteria.model";
+import { UploadedFile } from "express-fileupload";
+import path from "path";
+import fs from "fs";
 import { Types } from "mongoose";
 import PengajuanModel, {
   TPengajuan,
 } from "src/database/models/Pengajuan.model";
 import PengajuanCriteriaModel from "src/database/models/PengajuanCriteria.model";
 import { AuthTCBRoute } from "src/types/Global";
+import readXlsxFile, { readSheetNames } from "read-excel-file/node";
+import CriteriaModel from "src/database/models/Criteria.model";
 
 interface SingleData {
   _id: Types.ObjectId;
@@ -263,6 +267,91 @@ class PengajuanController {
       },
     ]);
     return res.json({ data: chartData });
+  };
+
+  uploadFile: AuthTCBRoute = async (req, res) => {
+    const { files } = req;
+    if (!files || !files.alternative)
+      return res.status(400).json({ data: "Alternative file is undefined" });
+    const alternative = files.alternative as UploadedFile;
+    const extension = alternative.name.match(/(?<=\.)\w+$/g)?.[0];
+    if (extension !== "xlsx")
+      return res.status(400).json({ data: "Invalid data extension" });
+    const filePath = path.resolve("") + `/file.${extension}`;
+    await alternative.mv(filePath);
+    const sheetName = await readSheetNames(filePath);
+    const allCriteria = await CriteriaModel.find({});
+    const criteriaName = allCriteria.map((v) => v.name);
+    let stopMessage = "";
+    for (const sheet of sheetName) {
+      const rows = await readXlsxFile(filePath, { sheet });
+      const [_, ...restTitle] = rows[0];
+      if (restTitle.length !== criteriaName.length) {
+        stopMessage = `Title incomplete in sheet '${sheet}'`;
+        break;
+      }
+      for (const rowTitle of restTitle) {
+        if (!criteriaName.includes(rowTitle as unknown as string)) {
+          stopMessage = `Title '${rowTitle}' in sheet '${sheet}' are not supported`;
+          break;
+        }
+      }
+      if (stopMessage) break;
+    }
+    if (stopMessage) {
+      fs.unlink(filePath, (err) => {
+        if (err) return console.log("File not deleted");
+      });
+      return res.status(400).json({ data: stopMessage });
+    }
+
+    const map = {
+      Nama: "Nama",
+      "Luas Tanah": "Luas Tanah",
+      "Kondisi Rumah": "Kondisi Rumah",
+      "Menerima Bantuan": "Menerima Bantuan",
+      Penghasilan: "Penghasilan",
+    } as const;
+    const jobArr = [
+      "Karyawan Swasta",
+      "Petani",
+      "Wiraswasta",
+      "Buruh harian lepas",
+    ];
+    const ageArr = [
+      39, 68, 49, 35, 46, 45, 53, 69, 72, 72, 50, 47, 52, 51, 36, 38, 52, 63,
+      92, 55, 57, 39, 66, 46, 80, 62,
+    ];
+
+    for (const sheet of sheetName) {
+      const rows = await readXlsxFile<Record<keyof typeof map, string>>(
+        filePath,
+        { sheet, map }
+      );
+      for (const r of rows.rows) {
+        const newPengajuan = await PengajuanModel.create({
+          alamat: sheet,
+          jenisKelamin: "laki",
+          nama: r.Nama,
+          pekerjaan: jobArr[Math.floor(Math.random() * jobArr.length)],
+          status: "married",
+          umur: ageArr[Math.floor(Math.random() * ageArr.length)],
+        });
+        const newPengajuanCriteria = allCriteria.map((v) => {
+          return {
+            criteriaId: v._id,
+            pengajuanId: newPengajuan._id,
+            value: r[v.name as keyof typeof map] || 0,
+          };
+        });
+
+        await PengajuanCriteriaModel.insertMany(newPengajuanCriteria);
+      }
+    }
+    fs.unlink(filePath, (err) => {
+      if (err) return console.log("File not deleted");
+    });
+    return res.json({ data: "Success" });
   };
 }
 
