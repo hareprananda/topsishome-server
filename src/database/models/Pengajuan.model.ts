@@ -6,6 +6,7 @@ export interface TPengajuan {
   alamat: string;
   status: string;
   jenisKelamin: "laki" | "perempuan";
+  idBanjar: mongoose.Types.ObjectId;
   umur: number;
   pekerjaan: string;
 }
@@ -13,6 +14,7 @@ export interface TPengajuan {
 const schema = new mongoose.Schema<TPengajuan>(
   {
     alamat: { type: String, required: true },
+    idBanjar: { type: mongoose.Schema.Types.ObjectId, require: true },
     status: { type: String, required: true },
     jenisKelamin: { type: String, required: true },
     umur: { type: Number, required: true },

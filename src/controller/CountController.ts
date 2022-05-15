@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import CriteriaCache from "src/database/cache/CriteriaCache";
 import CriteriaModel, { TCriteria } from "src/database/models/Criteria.model";
+import { TPengajuan } from "src/database/models/Pengajuan.model";
 import PengajuanCriteriaModel from "src/database/models/PengajuanCriteria.model";
 import { AuthTCBRoute, TCBRoute } from "src/types/Global";
 // luastanah, kondisiRumah, penerima bantuan, penghasilan dibawah umk
@@ -18,6 +19,7 @@ interface RawData {
   _id: mongoose.Types.ObjectId;
   nama: string;
   alamat: string;
+  banjar: string;
   criteria: {
     _id: mongoose.Types.ObjectId;
     name: string;
@@ -157,6 +159,7 @@ class CountController {
       nama: string;
       alamat: string;
       id: RawData["_id"];
+      banjar: string;
     }[] = [];
 
     for (const dataSingleNormalisasi of normalisasiTerbobot) {
@@ -178,6 +181,7 @@ class CountController {
         nama: dataSingleNormalisasi.nama,
         alamat: dataSingleNormalisasi.alamat,
         id: dataSingleNormalisasi._id,
+        banjar: dataSingleNormalisasi.banjar,
       });
     }
     return jarakSolusiIdeal;
@@ -190,18 +194,19 @@ class CountController {
     // const finalRanking: { ticker: string; nilai: number; nama: string }[] = [];
     return jarakSolusiIdeal
       .map((jarak) => {
-        const { dMin, dPlus, id, nama, alamat } = jarak;
+        const { dMin, dPlus, id, nama, alamat, banjar } = jarak;
         return {
           id,
           alamat,
           nama,
+          banjar,
           value: dMin / (dMin + dPlus),
         };
       })
       .sort((a, b) => b.value - a.value);
   };
 
-  getRawData = async () => {
+  getRawData = async (filter: Partial<TPengajuan> = {}) => {
     const rawData: RawData[] = await PengajuanCriteriaModel.aggregate([
       {
         $lookup: {
@@ -230,6 +235,7 @@ class CountController {
           _id: "$pengajuan._id",
           nama: "$pengajuan.nama",
           alamat: "$pengajuan.alamat",
+          idBanjar: "$pengajuan.idBanjar",
           criteria: {
             _id: "$criteria._id",
             name: "$criteria.name",
@@ -240,11 +246,38 @@ class CountController {
         },
       },
       {
+        $match: Object.keys(filter).reduce((acc, v) => {
+          acc[v] = { $eq: filter[v as keyof typeof filter] };
+          return acc;
+        }, {} as Record<string, any>),
+      },
+      {
         $group: {
           _id: "$_id",
           nama: { $first: "$nama" },
+          idBanjar: { $first: "$idBanjar" },
           alamat: { $first: "$alamat" },
           criteria: { $push: "$criteria" },
+        },
+      },
+      {
+        $lookup: {
+          from: "banjars",
+          as: "banjar",
+          foreignField: "_id",
+          localField: "idBanjar",
+        },
+      },
+      {
+        $unwind: "$banjar",
+      },
+      {
+        $project: {
+          _id: "$_id",
+          nama: "$nama",
+          banjar: "$banjar.nama",
+          alamat: "$alamat",
+          criteria: "$criteria",
         },
       },
       {
@@ -273,8 +306,12 @@ class CountController {
     });
   };
 
-  result: AuthTCBRoute = async (req, res) => {
-    const rawData = await this.getRawData();
+  result: AuthTCBRoute<{}, { banjar?: string }> = async (req, res) => {
+    const banjarId = req.query.banjar;
+    const filterBanjar = banjarId
+      ? { idBanjar: new mongoose.Types.ObjectId(banjarId) }
+      : {};
+    const rawData = await this.getRawData(filterBanjar);
     const normalisasi = this.normalisasi(rawData);
     const normalisasiTerbobot = this.normalisasiTerbobot(normalisasi);
     this.idealSolution(normalisasiTerbobot);
@@ -284,8 +321,12 @@ class CountController {
     return res.json({ data: finalRanking });
   };
 
-  resultDetail: AuthTCBRoute = async (req, res) => {
-    const rawData = await this.getRawData();
+  resultDetail: AuthTCBRoute<{}, { banjar: string }> = async (req, res) => {
+    const banjarId = req.query.banjar;
+    const filterBanjar = banjarId
+      ? { idBanjar: new mongoose.Types.ObjectId(banjarId) }
+      : {};
+    const rawData = await this.getRawData(filterBanjar);
     const normalisasi = this.normalisasi(rawData);
     const normalisasiTerbobot = this.normalisasiTerbobot(normalisasi);
     this.idealSolution(normalisasiTerbobot);

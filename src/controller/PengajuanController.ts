@@ -10,6 +10,7 @@ import PengajuanCriteriaModel from "src/database/models/PengajuanCriteria.model"
 import { AuthTCBRoute } from "src/types/Global";
 import readXlsxFile, { readSheetNames } from "read-excel-file/node";
 import CriteriaModel from "src/database/models/Criteria.model";
+import mongoose from "mongoose";
 
 interface SingleData {
   _id: Types.ObjectId;
@@ -28,40 +29,45 @@ interface SingleData {
 
 class PengajuanController {
   private paginationLength = 20;
-  get: AuthTCBRoute<{}, { page: string; name: string }> = async (req, res) => {
-    const page = parseInt(req.query.page || "1");
-    const name = req.query.name || "";
-    const nameRegex = new RegExp(name, "gi");
-    const dataLength = await PengajuanModel.find({ nama: nameRegex }).count();
-    const numberOfPage = Math.ceil(dataLength / this.paginationLength);
-    const data = await PengajuanModel.aggregate([
-      {
-        $sort: { nama: 1 },
-      },
-      {
-        $match: { nama: nameRegex },
-      },
-      {
-        $skip: (page - 1) * this.paginationLength,
-      },
-      {
-        $limit: this.paginationLength,
-      },
-      {
-        $unset: ["__v", "createdAt", "updatedAt"],
-      },
-    ]);
-    return res.json({
-      data: {
-        meta: {
-          currentPage: page,
-          numberOfPage,
-          dataPerPage: this.paginationLength,
+  get: AuthTCBRoute<{}, { page: string; name: string; banjar?: string }> =
+    async (req, res) => {
+      const page = parseInt(req.query.page || "1");
+      const name = req.query.name || "";
+      const idBanjar = req.query.banjar;
+      const banjarFilter = idBanjar
+        ? { idBanjar: new mongoose.Types.ObjectId(idBanjar) }
+        : {};
+      const nameRegex = new RegExp(name, "gi");
+      const dataLength = await PengajuanModel.find({ nama: nameRegex }).count();
+      const numberOfPage = Math.ceil(dataLength / this.paginationLength);
+      const data = await PengajuanModel.aggregate([
+        {
+          $sort: { nama: 1 },
         },
-        data,
-      },
-    });
-  };
+        {
+          $match: { nama: nameRegex, ...banjarFilter },
+        },
+        {
+          $skip: (page - 1) * this.paginationLength,
+        },
+        {
+          $limit: this.paginationLength,
+        },
+        {
+          $unset: ["__v", "createdAt", "updatedAt"],
+        },
+      ]);
+      return res.json({
+        data: {
+          meta: {
+            currentPage: page,
+            numberOfPage,
+            dataPerPage: this.paginationLength,
+          },
+          data,
+        },
+      });
+    };
 
   getSinglePengajuan = async (id: string) => {
     try {
@@ -202,6 +208,7 @@ class PengajuanController {
   delete: AuthTCBRoute<{}, {}, { id: string }> = async (req, res) => {
     const { id } = req.params;
     await PengajuanModel.deleteOne({ _id: id });
+    await PengajuanCriteriaModel.deleteMany({ pengajuanId: id });
     return res.json({ data: "Success" });
   };
 
