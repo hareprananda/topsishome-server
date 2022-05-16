@@ -11,6 +11,7 @@ import { AuthTCBRoute } from "src/types/Global";
 import readXlsxFile, { readSheetNames } from "read-excel-file/node";
 import CriteriaModel from "src/database/models/Criteria.model";
 import mongoose from "mongoose";
+import BanjarModel from "src/database/models/Banjar.model";
 
 interface SingleData {
   _id: Types.ObjectId;
@@ -293,7 +294,17 @@ class PengajuanController {
     await alternative.mv(filePath);
     const sheetName = await readSheetNames(filePath);
     const allCriteria = await CriteriaModel.find({});
+    const banjarRawData = await BanjarModel.find({});
+    const banjarObject = banjarRawData.reduce((acc, v) => {
+      acc[v.nama.toLowerCase()] = v._id;
+      return acc;
+    }, {} as Record<string, mongoose.Types.ObjectId>);
     const criteriaName = allCriteria.map((v) => v.name);
+    const allBanjarIsExist = sheetName.every(
+      (banjar) => !!banjarObject[banjar.toLowerCase()]
+    );
+    if (!allBanjarIsExist)
+      return res.status(400).json({ data: "Some banjar not found" });
     let stopMessage = "";
     for (const sheet of sheetName) {
       const rows = await readXlsxFile(filePath, { sheet });
@@ -344,6 +355,7 @@ class PengajuanController {
         const newPengajuan = await PengajuanModel.create({
           alamat: sheet,
           jenisKelamin: "laki",
+          idBanjar: banjarObject[sheet.toLowerCase()],
           nama: r.Nama,
           pekerjaan: jobArr[Math.floor(Math.random() * jobArr.length)],
           status: "married",
