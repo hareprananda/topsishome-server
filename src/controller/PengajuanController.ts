@@ -105,6 +105,7 @@ class PengajuanController {
           $group: {
             _id: "$_id",
             alamat: { $first: "$alamat" },
+            idBanjar: { $first: "$idBanjar" },
             status: { $first: "$status" },
             jenisKelamin: { $first: "$jenisKelamin" },
             umur: { $first: "$umur" },
@@ -119,6 +120,7 @@ class PengajuanController {
           $project: {
             _id: "$_id",
             alamat: "$alamat",
+            idBanjar: "$idBanjar",
             status: "$status",
             jenisKelamin: "$jenisKelamin",
             umur: "$umur",
@@ -135,6 +137,31 @@ class PengajuanController {
                 },
               },
             },
+          },
+        },
+        {
+          $lookup: {
+            as: "banjar",
+            from: "banjars",
+            foreignField: "_id",
+            localField: "idBanjar",
+          },
+        },
+        {
+          $unwind: "$banjar",
+        },
+        {
+          $project: {
+            _id: "$_id",
+            alamat: "$alamat",
+            idBanjar: "$idBanjar",
+            namaBanjar: "$banjar.nama",
+            status: "$status",
+            jenisKelamin: "$jenisKelamin",
+            umur: "$umur",
+            pekerjaan: "$pekerjaan",
+            nama: "$nama",
+            criteria: "$criteria",
           },
         },
       ]);
@@ -161,13 +188,22 @@ class PengajuanController {
   store: AuthTCBRoute<
     TPengajuan & { criteria: { id: string; value: number }[] }
   > = async (req, res) => {
-    const { alamat, jenisKelamin, nama, pekerjaan, status, umur, criteria } =
-      req.body;
+    const {
+      alamat,
+      jenisKelamin,
+      nama,
+      pekerjaan,
+      status,
+      umur,
+      criteria,
+      idBanjar,
+    } = req.body;
     const newData: Partial<typeof req.body> = {
       alamat,
       jenisKelamin,
       nama,
       pekerjaan,
+      idBanjar: new mongoose.Types.ObjectId(idBanjar),
       status,
       umur,
       criteria,
@@ -219,13 +255,22 @@ class PengajuanController {
     { id: string }
   > = async (req, res) => {
     const { id } = req.params;
-    const { alamat, jenisKelamin, nama, pekerjaan, status, umur, criteria } =
-      req.body;
+    const {
+      alamat,
+      jenisKelamin,
+      nama,
+      pekerjaan,
+      status,
+      umur,
+      criteria,
+      idBanjar,
+    } = req.body;
     const updatedCriteriaID = criteria?.map((cr) => cr.id);
     const updatedValue = criteria?.map((cr) => cr.value);
     const allCriteriaID = CriteriaCache.get().map((cr) => cr._id);
     const newData: Partial<typeof req.body> = {
       alamat,
+      idBanjar: new mongoose.Types.ObjectId(idBanjar),
       jenisKelamin,
       nama,
       pekerjaan,
