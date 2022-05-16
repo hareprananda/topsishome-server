@@ -5,6 +5,7 @@ import CriteriaController from "src/controller/CriteriaController";
 import PengajuanController from "src/controller/PengajuanController";
 import UserController from "src/controller/UserController";
 import AdminMiddleware from "src/middleware/routemiddleware/AdminMiddleware";
+import BanjarController from "src/controller/BanjarController";
 const router = express.Router();
 
 router.post("/auth/login", AuthController.login);
@@ -22,6 +23,11 @@ router.post("/pengajuan", PengajuanController.store);
 router.delete("/pengajuan/:id", PengajuanController.delete);
 router.put("/pengajuan/:id", PengajuanController.update);
 router.post("/upload/users", PengajuanController.uploadFile);
+
+router.get("/banjar", BanjarController.get);
+router.put("/banjar/:id", BanjarController.update);
+router.delete("/banjar/:id", BanjarController.remove);
+router.post("/banjar", BanjarController.store);
 
 router.get("/result", CountController.result);
 router.get("/result-profile-chart", PengajuanController.pengajuanChart);
