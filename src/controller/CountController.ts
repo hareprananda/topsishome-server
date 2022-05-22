@@ -4,6 +4,7 @@ import CriteriaModel, { TCriteria } from "src/database/models/Criteria.model";
 import { TPengajuan } from "src/database/models/Pengajuan.model";
 import PengajuanCriteriaModel from "src/database/models/PengajuanCriteria.model";
 import { AuthTCBRoute, TCBRoute } from "src/types/Global";
+import excel from "exceljs";
 // luastanah, kondisiRumah, penerima bantuan, penghasilan dibawah umk
 
 interface TResult {
@@ -350,6 +351,43 @@ class CountController {
         ),
         finalRanking,
       },
+    });
+  };
+
+  downloadReport: AuthTCBRoute = async (req, res) => {
+    const workbook = new excel.Workbook();
+    const worksheet = workbook.addWorksheet("Penerima Bantuan");
+    const data = [
+      {
+        id: 1,
+        title: "This is title",
+        description: "this is description",
+        published: "2020",
+      },
+      {
+        id: 2,
+        title: "This is title",
+        description: "this is description",
+        published: "2020",
+      },
+    ];
+    worksheet.columns = [
+      { header: "Id", key: "id", width: 5 },
+      { header: "Title", key: "title", width: 25 },
+      { header: "Description", key: "description", width: 25 },
+      { header: "Published", key: "published", width: 10 },
+    ];
+    worksheet.addRows(data);
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=" + "tutorials.xlsx"
+    );
+    return workbook.xlsx.write(res).then(function () {
+      res.status(200).end();
     });
   };
 }
