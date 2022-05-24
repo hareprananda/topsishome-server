@@ -2,9 +2,12 @@ import mongoose from "mongoose";
 import CriteriaCache from "src/database/cache/CriteriaCache";
 import CriteriaModel, { TCriteria } from "src/database/models/Criteria.model";
 import { TPengajuan } from "src/database/models/Pengajuan.model";
-import PengajuanCriteriaModel from "src/database/models/PengajuanCriteria.model";
+import PengajuanCriteriaModel, {
+  TPengajuanCriteria,
+} from "src/database/models/PengajuanCriteria.model";
 import { AuthTCBRoute, TCBRoute } from "src/types/Global";
 import excel from "exceljs";
+import BanjarModel from "src/database/models/Banjar.model";
 // luastanah, kondisiRumah, penerima bantuan, penghasilan dibawah umk
 
 interface TResult {
@@ -19,6 +22,7 @@ interface TResult {
 interface RawData {
   _id: mongoose.Types.ObjectId;
   nama: string;
+  year: number;
   alamat: string;
   banjar: string;
   criteria: {
@@ -158,6 +162,7 @@ class CountController {
       dMin: number;
       dPlus: number;
       nama: string;
+      year: number;
       alamat: string;
       id: RawData["_id"];
       banjar: string;
@@ -179,6 +184,7 @@ class CountController {
       jarakSolusiIdeal.push({
         dPlus: Math.sqrt(tempDPlus),
         dMin: Math.sqrt(tempDMin),
+        year: dataSingleNormalisasi.year,
         nama: dataSingleNormalisasi.nama,
         alamat: dataSingleNormalisasi.alamat,
         id: dataSingleNormalisasi._id,
@@ -195,10 +201,11 @@ class CountController {
     // const finalRanking: { ticker: string; nilai: number; nama: string }[] = [];
     return jarakSolusiIdeal
       .map((jarak) => {
-        const { dMin, dPlus, id, nama, alamat, banjar } = jarak;
+        const { dMin, dPlus, id, nama, alamat, banjar, year } = jarak;
         return {
           id,
           alamat,
+          year,
           nama,
           banjar,
           value: dMin / (dMin + dPlus),
@@ -207,8 +214,23 @@ class CountController {
       .sort((a, b) => b.value - a.value);
   };
 
-  getRawData = async (filter: Partial<TPengajuan> = {}) => {
+  getRawData = async (
+    filter: Partial<TPengajuan & TPengajuanCriteria> = {}
+  ) => {
+    const { year, ...restFilter } = filter;
+    let latestYear = new Date().getFullYear();
+    if (!year) {
+      const allYear = await PengajuanCriteriaModel.distinct("year");
+      allYear.sort((a, b) => b - a);
+      latestYear = allYear[0];
+    }
+
     const rawData: RawData[] = await PengajuanCriteriaModel.aggregate([
+      {
+        $match: {
+          year: { $eq: year || latestYear },
+        },
+      },
       {
         $lookup: {
           from: "pengajuans",
@@ -236,6 +258,7 @@ class CountController {
           _id: "$pengajuan._id",
           nama: "$pengajuan.nama",
           alamat: "$pengajuan.alamat",
+          year: "$year",
           idBanjar: "$pengajuan.idBanjar",
           criteria: {
             _id: "$criteria._id",
@@ -247,8 +270,8 @@ class CountController {
         },
       },
       {
-        $match: Object.keys(filter).reduce((acc, v) => {
-          acc[v] = { $eq: filter[v as keyof typeof filter] };
+        $match: Object.keys(restFilter).reduce((acc, v) => {
+          acc[v] = { $eq: restFilter[v as keyof typeof restFilter] };
           return acc;
         }, {} as Record<string, any>),
       },
@@ -256,6 +279,7 @@ class CountController {
         $group: {
           _id: "$_id",
           nama: { $first: "$nama" },
+          year: { $first: "$year" },
           idBanjar: { $first: "$idBanjar" },
           alamat: { $first: "$alamat" },
           criteria: { $push: "$criteria" },
@@ -276,6 +300,7 @@ class CountController {
         $project: {
           _id: "$_id",
           nama: "$nama",
+          year: "$year",
           banjar: "$banjar.nama",
           alamat: "$alamat",
           criteria: "$criteria",
@@ -307,27 +332,58 @@ class CountController {
     });
   };
 
-  result: AuthTCBRoute<{}, { banjar?: string }> = async (req, res) => {
-    const banjarId = req.query.banjar;
-    const filterBanjar = banjarId
-      ? { idBanjar: new mongoose.Types.ObjectId(banjarId) }
-      : {};
-    const rawData = await this.getRawData(filterBanjar);
+  async getResult(filter: Record<string, any>) {
+    const rawData = await this.getRawData(filter);
     const normalisasi = this.normalisasi(rawData);
     const normalisasiTerbobot = this.normalisasiTerbobot(normalisasi);
     this.idealSolution(normalisasiTerbobot);
     const jarakSolusiIdeal = this.idealSolutionDistance(normalisasiTerbobot);
     const finalRanking = this.finalRankingList(jarakSolusiIdeal);
+    return finalRanking;
+  }
+
+  result: AuthTCBRoute<{}, { banjar: string; year: string }> = async (
+    req,
+    res
+  ) => {
+    let filter: Record<string, any> = {
+      idBanjar: req.query.banjar
+        ? new mongoose.Types.ObjectId(req.query.banjar)
+        : "",
+      year: isNaN(parseInt(req.query.year)) ? "" : parseInt(req.query.year),
+    };
+    filter = (Object.keys(filter) as (keyof typeof filter)[]).reduce(
+      (acc, v) => {
+        if (!filter[v]) return acc;
+        acc[v] = filter[v];
+        return acc;
+      },
+      {} as typeof filter
+    );
+    const finalRanking = await this.getResult(filter);
 
     return res.json({ data: finalRanking });
   };
 
-  resultDetail: AuthTCBRoute<{}, { banjar: string }> = async (req, res) => {
-    const banjarId = req.query.banjar;
-    const filterBanjar = banjarId
-      ? { idBanjar: new mongoose.Types.ObjectId(banjarId) }
-      : {};
-    const rawData = await this.getRawData(filterBanjar);
+  resultDetail: AuthTCBRoute<{}, { banjar: string; year: string }> = async (
+    req,
+    res
+  ) => {
+    let filter: Record<string, any> = {
+      idBanjar: req.query.banjar
+        ? new mongoose.Types.ObjectId(req.query.banjar)
+        : "",
+      year: isNaN(parseInt(req.query.year)) ? "" : parseInt(req.query.year),
+    };
+    filter = (Object.keys(filter) as (keyof typeof filter)[]).reduce(
+      (acc, v) => {
+        if (!filter[v]) return acc;
+        acc[v] = filter[v];
+        return acc;
+      },
+      {} as typeof filter
+    );
+    const rawData = await this.getRawData(filter);
     const normalisasi = this.normalisasi(rawData);
     const normalisasiTerbobot = this.normalisasiTerbobot(normalisasi);
     this.idealSolution(normalisasiTerbobot);
@@ -354,30 +410,43 @@ class CountController {
     });
   };
 
-  downloadReport: AuthTCBRoute = async (req, res) => {
+  downloadReport: AuthTCBRoute<{}, { banjar: string; year: string }> = async (
+    req,
+    res
+  ) => {
+    let filter: Record<string, any> = {
+      idBanjar: req.query.banjar
+        ? new mongoose.Types.ObjectId(req.query.banjar)
+        : "",
+      year: isNaN(parseInt(req.query.year)) ? "" : parseInt(req.query.year),
+    };
+    filter = (Object.keys(filter) as (keyof typeof filter)[]).reduce(
+      (acc, v) => {
+        if (!filter[v]) return acc;
+        acc[v] = filter[v];
+        return acc;
+      },
+      {} as typeof filter
+    );
+    const finalRanking = await this.getResult(filter);
+    if (finalRanking.length === 0)
+      return res.status(400).json({ data: "Bad request" });
     const workbook = new excel.Workbook();
-    const worksheet = workbook.addWorksheet("Penerima Bantuan");
-    const data = [
-      {
-        id: 1,
-        title: "This is title",
-        description: "this is description",
-        published: "2020",
-      },
-      {
-        id: 2,
-        title: "This is title",
-        description: "this is description",
-        published: "2020",
-      },
-    ];
+    const worksheet = workbook.addWorksheet(
+      req.query.banjar
+        ? `10 besar ${finalRanking[0].banjar}`
+        : "Penerima Bantuan"
+    );
     worksheet.columns = [
-      { header: "Id", key: "id", width: 5 },
-      { header: "Title", key: "title", width: 25 },
-      { header: "Description", key: "description", width: 25 },
-      { header: "Published", key: "published", width: 10 },
+      { header: "Peringkat", key: "rank", width: 10 },
+      { header: "Nama", key: "nama", width: 40 },
+      { header: "Banjar", key: "banjar", width: 20 },
+      { header: "Tahun", key: "year", width: 10 },
+      { header: "Nilai", key: "value", width: 10 },
     ];
-    worksheet.addRows(data);
+    worksheet.addRows(
+      finalRanking.slice(0, 10).map((v, k) => ({ rank: k + 1, ...v }))
+    );
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

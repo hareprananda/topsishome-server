@@ -32,6 +32,7 @@ router.post("/banjar", BanjarController.store);
 router.get("/result", CountController.result);
 router.get("/result-profile-chart", PengajuanController.pengajuanChart);
 router.get("/result-detail", CountController.resultDetail);
+router.get("/result-report", CountController.downloadReport);
 
 router.get("/users", AdminMiddleware(UserController.get));
 router.put("/user/:id", AdminMiddleware(UserController.update));
