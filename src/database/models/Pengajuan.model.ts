@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 export interface TPengajuan {
-  _id: string;
+  _id: mongoose.Types.ObjectId;
   nama: string;
   alamat: string;
   status: string;

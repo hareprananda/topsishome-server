@@ -1,8 +1,8 @@
-import { Schema, model } from "mongoose";
+import { Schema, model, Types } from "mongoose";
 
 export interface TPengajuanCriteria {
-  pengajuanId: Schema.Types.ObjectId;
-  criteriaId: Schema.Types.ObjectId;
+  pengajuanId: Types.ObjectId;
+  criteriaId: Types.ObjectId;
   year: number;
   value: number;
 }
