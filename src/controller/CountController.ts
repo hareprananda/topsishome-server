@@ -7,7 +7,10 @@ import PengajuanCriteriaModel, {
 } from "src/database/models/PengajuanCriteria.model";
 import { AuthTCBRoute, TCBRoute } from "src/types/Global";
 import excel from "exceljs";
-import BanjarModel from "src/database/models/Banjar.model";
+import pdf from "html-pdf";
+import path from "path";
+import fs from "fs";
+import DateTime from "src/helper/DateTime";
 // luastanah, kondisiRumah, penerima bantuan, penghasilan dibawah umk
 
 interface TResult {
@@ -458,6 +461,51 @@ class CountController {
     return workbook.xlsx.write(res).then(function () {
       res.status(200).end();
     });
+  };
+
+  downloadPDF: AuthTCBRoute = async (req, res) => {
+    const protocol = req.protocol;
+    const domain = `${protocol}://${req.get("host")}`;
+    const currentDate = new Date();
+    const dateTime = `${currentDate.getDate()} ${DateTime.month(
+      currentDate.getMonth()
+    )} ${currentDate.getFullYear()}`;
+    const fileName = "SuratPenerima.pdf";
+    const pathFinal = path.resolve(`src/pdf/${fileName}`);
+    let HTMLContent = fs.readFileSync(
+      path.resolve("src/pdf/Laporan.html"),
+      "utf8"
+    );
+    const data = await this.getResult({});
+    const tableElement = data.slice(0, 10).reduce(
+      (acc, v, idx) =>
+        (acc += `<tr>
+      <td>${idx + 1}</td>
+      <td>${v.nama}</td>
+      <td>${v.alamat}</td>
+    </tr>`),
+      ""
+    );
+    HTMLContent = HTMLContent.replace(
+      /{{\s*penerimabantuan\s*}}/gi,
+      tableElement
+    );
+    HTMLContent = HTMLContent.replace(/{{\s*baseUrl\s*}}/g, domain);
+    HTMLContent = HTMLContent.replace(/{{\s*dateTime\s*}}/g, dateTime);
+
+    pdf
+      .create(HTMLContent, {
+        format: "A4",
+        orientation: "landscape",
+      })
+      .toFile(pathFinal, function (err, fileRes) {
+        if (err) return console.log(err);
+        res.status(200).download(fileRes.filename, (err) => {
+          if (err)
+            res.status(400).json({ data: "Oops something bad happened" });
+        });
+        // console.log(res); // { filename: '/app/businesscard.pdf' }
+      });
   };
 }
 
