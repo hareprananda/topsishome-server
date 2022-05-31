@@ -463,10 +463,21 @@ class CountController {
     });
   };
 
-  downloadPDF: AuthTCBRoute = async (req, res) => {
+  downloadPDF: AuthTCBRoute<{}, { year: string }> = async (req, res) => {
     const protocol = req.protocol;
+    const { year } = req.query;
     const domain = `${protocol}://${req.get("host")}`;
     const currentDate = new Date();
+    const availableYear: number[] = [];
+    for (
+      let i = currentDate.getFullYear();
+      i > currentDate.getFullYear() - 4;
+      i--
+    ) {
+      availableYear.push(i);
+    }
+    if (!availableYear.includes(parseInt(year)))
+      return res.status(400).json({ data: "No year specified" });
     const dateTime = `${currentDate.getDate()} ${DateTime.month(
       currentDate.getMonth()
     )} ${currentDate.getFullYear()}`;
@@ -476,7 +487,7 @@ class CountController {
       path.resolve("src/pdf/Laporan.html"),
       "utf8"
     );
-    const data = await this.getResult({});
+    const data = await this.getResult({ year: parseInt(year) });
     const tableElement = data.slice(0, 10).reduce(
       (acc, v, idx) =>
         (acc += `<tr>
@@ -492,6 +503,7 @@ class CountController {
     );
     HTMLContent = HTMLContent.replace(/{{\s*baseUrl\s*}}/g, domain);
     HTMLContent = HTMLContent.replace(/{{\s*dateTime\s*}}/g, dateTime);
+    HTMLContent = HTMLContent.replace(/{{\s*periode\s*}}/g, year);
 
     pdf
       .create(HTMLContent, {
