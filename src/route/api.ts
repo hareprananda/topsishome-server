@@ -13,21 +13,21 @@ router.post("/auth/register", AuthController.register);
 router.get("/me", AuthController.me);
 
 router.get("/criteria", CriteriaController.get);
-router.put("/criteria/:id", CriteriaController.update);
-router.delete("/criteria/:id", CriteriaController.delete);
-router.post("/criteria", CriteriaController.store);
+router.put("/criteria/:id", AdminMiddleware(CriteriaController.update));
+router.delete("/criteria/:id", AdminMiddleware(CriteriaController.delete));
+router.post("/criteria", AdminMiddleware(CriteriaController.store));
 
 router.get("/pengajuan", PengajuanController.get);
 router.get("/pengajuan/:id", PengajuanController.find);
-router.post("/pengajuan", PengajuanController.store);
-router.delete("/pengajuan/:id", PengajuanController.delete);
-router.put("/pengajuan/:id", PengajuanController.update);
-router.post("/upload/users", PengajuanController.uploadFile);
+router.post("/pengajuan", AdminMiddleware(PengajuanController.store));
+router.delete("/pengajuan/:id", AdminMiddleware(PengajuanController.delete));
+router.put("/pengajuan/:id", AdminMiddleware(PengajuanController.update));
+router.post("/upload/users", AdminMiddleware(PengajuanController.uploadFile));
 
 router.get("/banjar", BanjarController.get);
-router.put("/banjar/:id", BanjarController.update);
-router.delete("/banjar/:id", BanjarController.remove);
-router.post("/banjar", BanjarController.store);
+router.put("/banjar/:id", AdminMiddleware(BanjarController.update));
+router.delete("/banjar/:id", AdminMiddleware(BanjarController.remove));
+router.post("/banjar", AdminMiddleware(BanjarController.store));
 
 router.get("/result", CountController.result);
 router.get("/result-profile-chart", PengajuanController.pengajuanChart);
