@@ -3,12 +3,8 @@ import { UploadedFile } from "express-fileupload";
 import path from "path";
 import fs from "fs";
 import { Types } from "mongoose";
-import PengajuanModel, {
-  TPengajuan,
-} from "src/database/models/Pengajuan.model";
-import PengajuanCriteriaModel, {
-  TPengajuanCriteria,
-} from "src/database/models/PengajuanCriteria.model";
+import PengajuanModel, { TPengajuan } from "src/database/models/Pengajuan.model";
+import PengajuanCriteriaModel, { TPengajuanCriteria } from "src/database/models/PengajuanCriteria.model";
 import { AuthTCBRoute } from "src/types/Global";
 import readXlsxFile, { readSheetNames } from "read-excel-file/node";
 import CriteriaModel, { TCriteria } from "src/database/models/Criteria.model";
@@ -40,18 +36,13 @@ interface SingleDataFinal extends Omit<SingleData, "criteria"> {
 
 class PengajuanController {
   private paginationLength = 20;
-  get: AuthTCBRoute<
-    {},
-    { page: string; name: string; banjar?: string; year: string }
-  > = async (req, res) => {
+  get: AuthTCBRoute<{}, { page: string; name: string; banjar?: string; year: string }> = async (req, res) => {
     const yearInteger = parseInt(req.query.year);
     const year = isNaN(yearInteger) ? "" : yearInteger;
     const page = parseInt(req.query.page || "1");
     const name = req.query.name || "";
     const idBanjar = req.query.banjar;
-    const banjarFilter = idBanjar
-      ? { idBanjar: new mongoose.Types.ObjectId(idBanjar) }
-      : {};
+    const banjarFilter = idBanjar ? { idBanjar: new mongoose.Types.ObjectId(idBanjar) } : {};
     const nameRegex = new RegExp(name, "gi");
     const dataLength = await PengajuanModel.find({ nama: nameRegex }).count();
     const numberOfPage = Math.ceil(dataLength / this.paginationLength);
@@ -194,17 +185,12 @@ class PengajuanController {
         criteria: newCriteria,
       };
       newPengajuan.criteria.forEach((cr, idx) => {
-        newPengajuan.criteria[idx].criteria = allCriteria.map(
-          (criteria, idx) => ({
-            id: criteria._id,
-            name: criteria.name,
-            year: cr.year,
-            value:
-              cr.criteria.find(
-                (cr) => cr.id.toString() == criteria._id.toString()
-              )?.value || 0,
-          })
-        );
+        newPengajuan.criteria[idx].criteria = allCriteria.map((criteria, idx) => ({
+          id: criteria._id,
+          name: criteria.name,
+          year: cr.year,
+          value: cr.criteria.find((cr) => cr.id.toString() == criteria._id.toString())?.value || 0,
+        }));
       });
       return { status: 200, data: newPengajuan };
     } catch (err) {
@@ -218,19 +204,8 @@ class PengajuanController {
     const { status, data } = await this.getSinglePengajuan(id);
     return res.status(status).json({ data });
   };
-  store: AuthTCBRoute<
-    TPengajuan & { criteria: { id: string; value: string; year: string }[] }
-  > = async (req, res) => {
-    const {
-      alamat,
-      jenisKelamin,
-      nama,
-      pekerjaan,
-      status,
-      umur,
-      criteria,
-      idBanjar,
-    } = req.body;
+  store: AuthTCBRoute<TPengajuan & { criteria: { id: string; value: string; year: string }[] }> = async (req, res) => {
+    const { alamat, jenisKelamin, nama, pekerjaan, status, umur, criteria, idBanjar } = req.body;
     const newData: Partial<typeof req.body> = {
       alamat,
       jenisKelamin,
@@ -256,13 +231,8 @@ class PengajuanController {
         !allCriteriaID.every((id) => newCriteriaID.includes(id.toString()))
       )
         throw { message: "Some key properties missing" };
-      else if (!newlyYear.every((year) => availYear.includes(year)))
-        throw { message: "Year are not valid" };
-      else if (
-        !newCriteriaValue.every((value) =>
-          /^\d+$/g.test(value as unknown as string)
-        )
-      )
+      else if (!newlyYear.every((year) => availYear.includes(year))) throw { message: "Year are not valid" };
+      else if (!newCriteriaValue.every((value) => /^\d+$/g.test(value as unknown as string)))
         throw { message: "Criteria value must be a number" };
       delete newData.criteria;
       const newPengajuan = await PengajuanModel.create(newData);
@@ -274,9 +244,7 @@ class PengajuanController {
           year: parseInt(cr.year),
         }))
       );
-      const { data: newStoredData } = await this.getSinglePengajuan(
-        newPengajuan._id.toString()
-      );
+      const { data: newStoredData } = await this.getSinglePengajuan(newPengajuan._id.toString());
 
       return res.json({ data: newStoredData });
     } catch (err: any) {
@@ -291,79 +259,62 @@ class PengajuanController {
     return res.json({ data: "Success" });
   };
 
-  update: AuthTCBRoute<
-    TPengajuan & { criteria: { id: string; value: number; year: string }[] },
-    {},
-    { id: string }
-  > = async (req, res) => {
-    const { id } = req.params;
-    const {
-      alamat,
-      jenisKelamin,
-      nama,
-      pekerjaan,
-      status,
-      umur,
-      criteria,
-      idBanjar,
-    } = req.body;
-    const updatedCriteriaID = criteria?.map((cr) => cr.id);
-    const updatedValue = criteria?.map((cr) => cr.value);
-    const updatedYear = criteria?.map((cr) => parseInt(cr.year));
-    const currentYear = new Date().getFullYear();
-    const availYear: number[] = [];
-    for (let i = currentYear; i >= currentYear - 4; i--) {
-      availYear.push(i);
-    }
-    const allCriteriaID = CriteriaCache.get().map((cr) => cr._id);
-    const newData: Partial<typeof req.body> = {
-      alamat,
-      idBanjar: new mongoose.Types.ObjectId(idBanjar),
-      jenisKelamin,
-      nama,
-      pekerjaan,
-      status,
-      umur,
-      criteria,
-    };
-    try {
-      if (
-        !Object.values(newData).every((val) => !!val) ||
-        !allCriteriaID.every((id) => updatedCriteriaID.includes(id.toString()))
-      )
-        throw { message: "Some key properties missing" };
-      else if (!updatedYear.every((year) => availYear.includes(year)))
-        throw { message: "Year are not valid" };
-      else if (
-        !updatedValue.every((value) =>
-          /^\d+$/g.test(value as unknown as string)
-        )
-      )
-        throw { message: "Criteria value must be a number" };
-
-      delete newData.criteria;
-      await PengajuanModel.findOneAndUpdate({ _id: id }, newData);
-      for (const singleCriteria of criteria) {
-        await PengajuanCriteriaModel.findOneAndUpdate(
-          {
-            pengajuanId: new Types.ObjectId(id),
-            year: parseInt(singleCriteria.year),
-            criteriaId: new Types.ObjectId(singleCriteria.id),
-          },
-          {
-            value: singleCriteria.value,
-          },
-          {
-            upsert: true,
-          }
-        );
+  update: AuthTCBRoute<TPengajuan & { criteria: { id: string; value: number; year: string }[] }, {}, { id: string }> =
+    async (req, res) => {
+      const { id } = req.params;
+      const { alamat, jenisKelamin, nama, pekerjaan, status, umur, criteria, idBanjar } = req.body;
+      const updatedCriteriaID = criteria?.map((cr) => cr.id);
+      const updatedValue = criteria?.map((cr) => cr.value);
+      const updatedYear = criteria?.map((cr) => parseInt(cr.year));
+      const currentYear = new Date().getFullYear();
+      const availYear: number[] = [];
+      for (let i = currentYear; i >= currentYear - 4; i--) {
+        availYear.push(i);
       }
-      const { data: newSingleData } = await this.getSinglePengajuan(id);
-      return res.json({ data: newSingleData });
-    } catch (err: any) {
-      return res.status(400).json({ data: err.message });
-    }
-  };
+      const allCriteriaID = CriteriaCache.get().map((cr) => cr._id);
+      const newData: Partial<typeof req.body> = {
+        alamat,
+        idBanjar: new mongoose.Types.ObjectId(idBanjar),
+        jenisKelamin,
+        nama,
+        pekerjaan,
+        status,
+        umur,
+        criteria,
+      };
+      try {
+        if (
+          !Object.values(newData).every((val) => !!val) ||
+          !allCriteriaID.every((id) => updatedCriteriaID.includes(id.toString()))
+        )
+          throw { message: "Some key properties missing" };
+        else if (!updatedYear.every((year) => availYear.includes(year))) throw { message: "Year are not valid" };
+        else if (!updatedValue.every((value) => /^\d+$/g.test(value as unknown as string)))
+          throw { message: "Criteria value must be a number" };
+
+        delete newData.criteria;
+        await PengajuanModel.findOneAndUpdate({ _id: id }, newData);
+        for (const singleCriteria of criteria) {
+          await PengajuanCriteriaModel.findOneAndUpdate(
+            {
+              pengajuanId: new Types.ObjectId(id),
+              year: parseInt(singleCriteria.year),
+              criteriaId: new Types.ObjectId(singleCriteria.id),
+            },
+            {
+              value: singleCriteria.value,
+            },
+            {
+              upsert: true,
+            }
+          );
+        }
+        const { data: newSingleData } = await this.getSinglePengajuan(id);
+        return res.json({ data: newSingleData });
+      } catch (err: any) {
+        return res.status(400).json({ data: err.message });
+      }
+    };
 
   pengajuanChart: AuthTCBRoute = async (req, res) => {
     const [chartData] = await PengajuanModel.aggregate([
@@ -380,12 +331,10 @@ class PengajuanController {
 
   uploadFile: AuthTCBRoute = async (req, res) => {
     const { files } = req;
-    if (!files || !files.alternative)
-      return res.status(400).json({ data: "Alternative file is undefined" });
+    if (!files || !files.alternative) return res.status(400).json({ data: "Alternative file is undefined" });
     const alternative = files.alternative as UploadedFile;
     const extension = alternative.name.match(/(?<=\.)\w+$/g)?.[0];
-    if (extension !== "xlsx")
-      return res.status(400).json({ data: "Invalid data extension" });
+    if (extension !== "xlsx") return res.status(400).json({ data: "Invalid data extension" });
     const filePath = path.resolve("") + `/file.${extension}`;
     await alternative.mv(filePath);
     const sheetName = await readSheetNames(filePath);
@@ -396,24 +345,20 @@ class PengajuanController {
       return acc;
     }, {} as Record<string, mongoose.Types.ObjectId>);
     const criteriaName = allCriteria.map((v) => v.name);
-    const allBanjarIsExist = sheetName.every(
-      (banjar) => !!banjarObject[banjar.toLowerCase()]
-    );
-    if (!allBanjarIsExist)
-      return res.status(400).json({ data: "Some banjar not found" });
+    const allBanjarIsExist = sheetName.every((banjar) => !!banjarObject[banjar.toLowerCase()]);
+    if (!allBanjarIsExist) return res.status(400).json({ data: "Some banjar not found" });
     let stopMessage = "";
+    const additionalTitle = ["Nama", "Tahun", "Jenis kelamin", "Pekerjaan", "Umur", "Status"] as const;
     for (const sheet of sheetName) {
       const rows = await readXlsxFile(filePath, { sheet });
-      const restTitle = rows[0].slice(1, rows[0].length - 1);
-      if (restTitle.length !== criteriaName.length) {
-        stopMessage = `Title incomplete in sheet '${sheet}'`;
+      const undefinedTitle = [...criteriaName, ...additionalTitle].reduce((acc, v) => {
+        if (!rows[0].includes(v)) acc.push(v);
+        return acc;
+      }, [] as string[]);
+      if (undefinedTitle.length > 0) {
+        const concatUndefined = undefinedTitle.reduce((acc, v) => `"${acc}", "${v}"`, "").slice(3);
+        stopMessage = `Title incomplete in sheet '${sheet}', without ${concatUndefined} title`;
         break;
-      }
-      for (const rowTitle of restTitle) {
-        if (!criteriaName.includes(rowTitle as unknown as string)) {
-          stopMessage = `Title '${rowTitle}' in sheet '${sheet}' are not supported`;
-          break;
-        }
       }
       if (stopMessage) break;
     }
@@ -426,50 +371,37 @@ class PengajuanController {
 
     const map = {
       Nama: "Nama",
-      "Luas Tanah": "Luas Tanah",
-      "Kondisi Rumah": "Kondisi Rumah",
-      "Menerima Bantuan": "Menerima Bantuan",
-      Penghasilan: "Penghasilan",
       Tahun: "Tahun",
+      "Jenis kelamin": "Jenis kelamin",
+      Pekerjaan: "Pekerjaan",
+      Umur: "Umur",
+      Status: "Status",
+      ...criteriaName.reduce((acc, v) => {
+        acc[v] = v;
+        return acc;
+      }, {} as Record<string, any>),
     } as const;
-    const jobArr = [
-      "Karyawan Swasta",
-      "Petani",
-      "Wiraswasta",
-      "Buruh harian lepas",
-    ];
-    const ageArr = [
-      39, 68, 49, 35, 46, 45, 53, 69, 72, 72, 50, 47, 52, 51, 36, 38, 52, 63,
-      92, 55, 57, 39, 66, 46, 80, 62,
-    ];
 
     for (const sheet of sheetName) {
-      const rows = await readXlsxFile<Record<keyof typeof map, string>>(
-        filePath,
-        { sheet, map }
-      );
+      const rows = await readXlsxFile<Record<keyof typeof map, string>>(filePath, { sheet, map });
       for (const r of rows.rows) {
         const newPengajuan = await PengajuanModel.create({
-          alamat: sheet,
-          jenisKelamin: "laki",
+          alamat: sheet, //aka banjar
+          jenisKelamin: r["Jenis kelamin"] === "Laki-laki" ? "laki" : "perempuan",
           idBanjar: banjarObject[sheet.toLowerCase()],
           nama: r.Nama,
-          pekerjaan: jobArr[Math.floor(Math.random() * jobArr.length)],
-          status: "married",
-          umur: ageArr[Math.floor(Math.random() * ageArr.length)],
+          pekerjaan: r.Pekerjaan,
+          status: r.Status,
+          umur: r.Umur,
         });
-        const newPengajuanCriteria: TPengajuanCriteria[] = allCriteria.map(
-          (v) => {
-            return {
-              criteriaId: v._id,
-              pengajuanId: newPengajuan._id,
-              year: parseInt(r.Tahun),
-              value: isNaN(parseInt(r[v.name as keyof typeof map]))
-                ? 0
-                : parseInt(r[v.name as keyof typeof map]),
-            };
-          }
-        );
+        const newPengajuanCriteria: TPengajuanCriteria[] = allCriteria.map((v) => {
+          return {
+            criteriaId: v._id,
+            pengajuanId: newPengajuan._id,
+            year: parseInt(r.Tahun),
+            value: isNaN(parseInt(r[v.name as keyof typeof map])) ? 0 : parseInt(r[v.name as keyof typeof map]),
+          };
+        });
 
         await PengajuanCriteriaModel.insertMany(newPengajuanCriteria);
       }
