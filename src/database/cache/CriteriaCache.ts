@@ -10,7 +10,7 @@ const CriteriaCache = () => {
       {},
       { createdAt: 0, updatedAt: 0, __v: 0 }
     );
-    Cache = allCriteria;
+    Cache = [...allCriteria];
   };
 
   const set = (newCache: typeof Cache) => {

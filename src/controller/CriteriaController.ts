@@ -5,8 +5,9 @@ import CriteriaCache from "database/cache/CriteriaCache";
 
 class CriteriaController {
   get: AuthTCBRoute = async (req, res) => {
+    const data =await CriteriaModel.find({}, { createdAt: 0, updatedAt: 0, __v: 0 });
     return res.json({
-      data: CriteriaCache.get(),
+      data,
     });
   };
 

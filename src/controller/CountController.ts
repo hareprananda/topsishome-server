@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import CriteriaCache from "src/database/cache/CriteriaCache";
 import CriteriaModel, { TCriteria } from "src/database/models/Criteria.model";
 import { TPengajuan } from "src/database/models/Pengajuan.model";
 import PengajuanCriteriaModel, {
@@ -315,7 +314,7 @@ class CountController {
         },
       },
     ]);
-    this.allCriteria = CriteriaCache.get();
+    this.allCriteria = await CriteriaModel.find({}, { createdAt: 0, updatedAt: 0, __v: 0 });
     return rawData.map((data) => {
       return {
         ...data,
@@ -336,12 +335,18 @@ class CountController {
   };
 
   async getResult(filter: Record<string, any>) {
+    this.solusiIdeal = {
+      positif: {},
+      negatif: {},
+    };
+    this.allCriteria = [];
+    this.pembagi = {}
     const rawData = await this.getRawData(filter);
-    const normalisasi = this.normalisasi(rawData);
-    const normalisasiTerbobot = this.normalisasiTerbobot(normalisasi);
-    this.idealSolution(normalisasiTerbobot);
-    const jarakSolusiIdeal = this.idealSolutionDistance(normalisasiTerbobot);
-    const finalRanking = this.finalRankingList(jarakSolusiIdeal);
+    const normalisasi = await this.normalisasi(rawData);
+    const normalisasiTerbobot = await this.normalisasiTerbobot(normalisasi);
+    await this.idealSolution(normalisasiTerbobot);
+    const jarakSolusiIdeal = await this.idealSolutionDistance(normalisasiTerbobot);
+    const finalRanking = await this.finalRankingList(jarakSolusiIdeal);
     return finalRanking;
   }
 
