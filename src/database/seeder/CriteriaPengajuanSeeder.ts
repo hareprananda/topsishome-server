@@ -1,10 +1,9 @@
 import CriteriaModel, { TCriteria } from "../models/Criteria.model";
 import PengajuanModel, { TPengajuan } from "../models/Pengajuan.model";
-import PengajuanCriteriaModel, {
-  TPengajuanCriteria,
-} from "../models/PengajuanCriteria.model";
+import PengajuanCriteriaModel, { TPengajuanCriteria } from "../models/PengajuanCriteria.model";
 import { Types } from "mongoose";
 import mongoose from "mongoose";
+import PengajuanCriteriaBackupModel from "../models/PengajuanCriteriaBackup.model";
 
 const CriteriaPengajuanSeeder = async () => {
   // const allCriteria: TCriteria[] = await CriteriaModel.find({});
@@ -36,12 +35,43 @@ const CriteriaPengajuanSeeder = async () => {
   //   }
   //   await PengajuanCriteriaModel.insertMany(newData);
   // }
-  const allCriteriaPengajuan = await PengajuanCriteriaModel.find({});
-  for (const data of allCriteriaPengajuan) {
-    await PengajuanCriteriaModel.findOneAndUpdate(
-      { _id: data._id },
-      { $set: { year: 2021 } }
-    );
+  // const allCriteriaPengajuan = await PengajuanCriteriaModel.find({});
+  // for (const data of allCriteriaPengajuan) {
+  //   await PengajuanCriteriaModel.findOneAndUpdate(
+  //     { _id: data._id },
+  //     { $set: { year: 2021 } }
+  //   );
+  // }
+
+  const pengajuanCriteriaBackup = await PengajuanCriteriaBackupModel.aggregate([
+    {
+      $lookup: {
+        from: "criterias",
+        foreignField: "_id",
+        localField: "criteriaId",
+        as: "criteria",
+      },
+    },
+    {
+      $unwind: "$criteria",
+    },
+  ]);
+
+  // Penghasilan
+  const penghasilanRange = [500000, 1000000, 2000000, 3000000];
+  const luasTanahRange = [100, 300, 500, 800];
+
+  for (const singleData of pengajuanCriteriaBackup) {
+    const { criteriaId, pengajuanId, year, criteria } = singleData;
+    let { value } = singleData;
+    if (criteria.name === "Luas Tanah") {
+      const indexRange = luasTanahRange.findIndex((v) => value <= v);
+      value = indexRange !== -1 ? indexRange + 1 : 5;
+    } else if (criteria.name === "Penghasilan") {
+      const indexRange = penghasilanRange.findIndex((v) => value <= v);
+      value = indexRange !== -1 ? indexRange + 1 : 5;
+    }
+    await PengajuanCriteriaModel.create({ criteriaId, pengajuanId, value, year });
   }
 };
 

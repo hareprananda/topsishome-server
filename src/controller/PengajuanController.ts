@@ -349,6 +349,8 @@ class PengajuanController {
     if (!allBanjarIsExist) return res.status(400).json({ data: "Some banjar not found" });
     let stopMessage = "";
     const additionalTitle = ["Nama", "Tahun", "Jenis kelamin", "Pekerjaan", "Umur", "Status"] as const;
+    const penghasilanRange = [500000, 1000000, 2000000, 3000000];
+    const luasTanahRange = [100, 300, 500, 800];
     for (const sheet of sheetName) {
       const rows = await readXlsxFile(filePath, { sheet });
       const undefinedTitle = [...criteriaName, ...additionalTitle].reduce((acc, v) => {
@@ -395,11 +397,19 @@ class PengajuanController {
           umur: r.Umur,
         });
         const newPengajuanCriteria: TPengajuanCriteria[] = allCriteria.map((v) => {
+          let value = isNaN(parseInt(r[v.name as keyof typeof map])) ? 0 : parseInt(r[v.name as keyof typeof map]);
+          if (v.name === "Luas Tanah") {
+            const indexRange = luasTanahRange.findIndex((v) => value <= v);
+            value = indexRange !== -1 ? indexRange + 1 : 5;
+          } else if (v.name === "Penghasilan") {
+            const indexRange = penghasilanRange.findIndex((v) => value <= v);
+            value = indexRange !== -1 ? indexRange + 1 : 5;
+          }
           return {
             criteriaId: v._id,
             pengajuanId: newPengajuan._id,
             year: parseInt(r.Tahun),
-            value: isNaN(parseInt(r[v.name as keyof typeof map])) ? 0 : parseInt(r[v.name as keyof typeof map]),
+            value,
           };
         });
 
